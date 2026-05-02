@@ -1,0 +1,36 @@
+# dependencies
+node_modules/
+
+# next.js
+.next/
+out/
+
+# production
+build/
+
+# env files — .env.example is committed, local overrides are not
+.env
+.env.local
+.env.*.local
+
+# sqlite dev database
+*.db
+*.db-shm
+*.db-wal
+
+# playwright
+/e2e/.auth/
+/playwright-report/
+/test-results/
+
+# misc
+.DS_Store
+*.pem
+npm-debug.log*
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# Claude
+.claude/

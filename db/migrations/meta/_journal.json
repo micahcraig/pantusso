@@ -1,0 +1,20 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1776648496982,
+      "tag": "0000_medical_mentor",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1777124424033,
+      "tag": "0001_light_matthew_murdock",
+      "breakpoints": true
+    }
+  ]
+}
