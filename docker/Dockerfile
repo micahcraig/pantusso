@@ -29,8 +29,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static    ./.next/static
 COPY --from=builder /app/public ./public
 
 # Migration assets (script + SQL files + native deps)
-COPY --from=builder /app/scripts          ./scripts
-COPY --from=builder /app/db/migrations    ./db/migrations
+COPY --from=builder /app/scripts               ./scripts
+COPY --from=builder /app/db/migrations         ./db/migrations
+COPY --from=builder /app/db/migrations-mysql   ./db/migrations-mysql
 COPY --from=builder /app/node_modules     ./node_modules
 
 USER nextjs

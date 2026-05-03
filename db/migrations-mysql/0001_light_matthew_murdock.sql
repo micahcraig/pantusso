@@ -1,0 +1,1 @@
+ALTER TABLE `game_players` ADD `note` text;

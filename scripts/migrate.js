@@ -2,10 +2,11 @@
 'use strict'
 
 const path = require('path')
-const migrationsFolder = path.join(__dirname, '..', 'db', 'migrations')
 const url = (process.env.DATABASE_URL || '').trim()
+const isMysql = url.startsWith('mysql://') || url.startsWith('mysql2://')
+const migrationsFolder = path.join(__dirname, '..', 'db', isMysql ? 'migrations-mysql' : 'migrations')
 
-if (url.startsWith('mysql://') || url.startsWith('mysql2://')) {
+if (isMysql) {
   const run = async () => {
     const { createConnection } = require('mysql2/promise')
     const { drizzle } = require('drizzle-orm/mysql2')
