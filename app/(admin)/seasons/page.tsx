@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { desc } from 'drizzle-orm'
+import { randomUUID } from 'crypto'
 import { requireAdmin } from '@/lib/session'
 import { db } from '@/db'
 import { seasons } from '@/db/schema'
@@ -13,7 +14,7 @@ function fmtDate(d: string) {
 export default async function SeasonsPage() {
   await requireAdmin()
 
-  const allSeasons = db.select().from(seasons).orderBy(desc(seasons.startDate)).all()
+  const allSeasons = await db.select().from(seasons).orderBy(desc(seasons.startDate)).all()
 
   async function createSeason(data: FormData) {
     'use server'
@@ -22,14 +23,15 @@ export default async function SeasonsPage() {
     const endDate   = (data.get('endDate')   as string).trim()
     if (!name || !startDate || !endDate) return
 
-    const row = db.insert(seasons).values({
-      name, startDate, endDate,
+    const id = randomUUID()
+    await db.insert(seasons).values({
+      id, name, startDate, endDate,
       createdAt: new Date(),
       updatedAt: new Date(),
-    }).returning().get()
+    }).run()
 
     revalidatePath('/seasons')
-    redirect(`/seasons/${row.id}`)
+    redirect(`/seasons/${id}`)
   }
 
   return (

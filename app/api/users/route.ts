@@ -12,7 +12,7 @@ export async function GET() {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  const all = db.select({
+  const all = await db.select({
     id: users.id, name: users.name, email: users.email,
     role: users.role, isActive: users.isActive, createdAt: users.createdAt,
   }).from(users).all()
@@ -42,7 +42,7 @@ export async function POST(req: Request) {
     updatedAt:    new Date(),
   }
 
-  db.insert(users).values(user).run()
+  await db.insert(users).values(user).run()
 
   const { passwordHash: _omit, ...safe } = user
   return NextResponse.json(safe, { status: 201 })

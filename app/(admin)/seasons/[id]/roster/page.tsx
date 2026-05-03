@@ -9,24 +9,24 @@ import { seasons, seasonRoster, players } from '@/db/schema'
 export default async function SeasonRosterPage({ params }: { params: { id: string } }) {
   await requireAdmin()
 
-  const season = db.select().from(seasons).where(eq(seasons.id, params.id)).get()
+  const season = await db.select().from(seasons).where(eq(seasons.id, params.id)).get()
   if (!season) notFound()
 
-  const rosterRows = db
+  const rosterRows = (await db
     .select({ playerId: players.id, name: players.name, jerseyNumber: players.jerseyNumber, preferredPositions: players.preferredPositions })
     .from(seasonRoster)
     .innerJoin(players, eq(seasonRoster.playerId, players.id))
     .where(eq(seasonRoster.seasonId, params.id))
-    .all()
+    .all())
     .sort((a, b) => +a.jerseyNumber - +b.jerseyNumber)
 
   const rosterIds = new Set(rosterRows.map(r => r.playerId))
 
-  const notOnRoster = db
+  const notOnRoster = (await db
     .select({ id: players.id, name: players.name, jerseyNumber: players.jerseyNumber, preferredPositions: players.preferredPositions })
     .from(players)
     .where(eq(players.isActive, true))
-    .all()
+    .all())
     .filter(p => !rosterIds.has(p.id))
     .sort((a, b) => +a.jerseyNumber - +b.jerseyNumber)
 
@@ -34,14 +34,14 @@ export default async function SeasonRosterPage({ params }: { params: { id: strin
     'use server'
     const playerId = data.get('playerId') as string
     if (!playerId) return
-    db.insert(seasonRoster).values({ seasonId: params.id, playerId, createdAt: new Date() }).run()
+    await db.insert(seasonRoster).values({ seasonId: params.id, playerId, createdAt: new Date() }).run()
     revalidatePath(`/seasons/${params.id}/roster`)
   }
 
   async function removePlayer(data: FormData) {
     'use server'
     const playerId = data.get('playerId') as string
-    db.delete(seasonRoster)
+    await db.delete(seasonRoster)
       .where(and(eq(seasonRoster.seasonId, params.id), eq(seasonRoster.playerId, playerId)))
       .run()
     revalidatePath(`/seasons/${params.id}/roster`)

@@ -7,14 +7,14 @@ import { opponents } from '@/db/schema'
 export default async function OpponentsPage() {
   await requireAdmin()
 
-  const allOpponents = db.select().from(opponents).orderBy(asc(opponents.name)).all()
+  const allOpponents = await db.select().from(opponents).orderBy(asc(opponents.name)).all()
 
   async function createOpponent(data: FormData) {
     'use server'
     const name  = (data.get('name')  as string).trim()
     const notes = (data.get('notes') as string)?.trim() || null
     if (!name) return
-    db.insert(opponents).values({ name, notes, createdAt: new Date(), updatedAt: new Date() }).run()
+    await db.insert(opponents).values({ name, notes, createdAt: new Date(), updatedAt: new Date() }).run()
     revalidatePath('/opponents')
   }
 
@@ -24,7 +24,7 @@ export default async function OpponentsPage() {
     const name  = (data.get('name')  as string).trim()
     const notes = (data.get('notes') as string)?.trim() || null
     if (!id || !name) return
-    db.update(opponents).set({ name, notes, updatedAt: new Date() }).where(eq(opponents.id, id)).run()
+    await db.update(opponents).set({ name, notes, updatedAt: new Date() }).where(eq(opponents.id, id)).run()
     revalidatePath('/opponents')
   }
 

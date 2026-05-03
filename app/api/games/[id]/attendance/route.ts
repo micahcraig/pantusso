@@ -10,7 +10,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const rows = db
+  const rows = await db
     .select({
       id:                    gamePlayers.id,
       playerId:              players.id,
@@ -44,13 +44,13 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   const now = new Date()
 
   for (const { playerId, attendance, note } of updates) {
-    const existing = db
+    const existing = await db
       .select({ availabilitySetAt: gamePlayers.availabilitySetAt })
       .from(gamePlayers)
       .where(and(eq(gamePlayers.gameId, params.id), eq(gamePlayers.playerId, playerId)))
       .get()
 
-    db.update(gamePlayers)
+    await db.update(gamePlayers)
       .set({
         ...(attendance !== undefined ? { attendance } : {}),
         ...(note       !== undefined ? { note }       : {}),

@@ -1,8 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
+const mockRandomUUID = vi.hoisted(() => vi.fn().mockReturnValue('g1'))
+vi.mock('crypto', () => ({ randomUUID: mockRandomUUID }))
+
 const mockDb = vi.hoisted(() => {
   const chain: Record<string, ReturnType<typeof vi.fn>> = {}
-  for (const m of ['select','from','where','insert','values','returning','get','all','run']) {
+  for (const m of ['select','from','where','insert','values','get','all','run']) {
     chain[m] = vi.fn()
   }
   chain.select.mockReturnValue(chain)
@@ -10,7 +13,6 @@ const mockDb = vi.hoisted(() => {
   chain.where.mockReturnValue(chain)
   chain.insert.mockReturnValue(chain)
   chain.values.mockReturnValue(chain)
-  chain.returning.mockReturnValue(chain)
   return chain
 })
 
@@ -33,43 +35,39 @@ const gameData = {
 describe('createGameWithRoster', () => {
   beforeEach(() => { vi.clearAllMocks() })
 
-  it('inserts the game and returns it', () => {
-    const createdGame = { id: 'g1', ...gameData }
-    mockDb.get.mockReturnValue(createdGame)
+  it('inserts the game and returns it', async () => {
     mockDb.all.mockReturnValue([])
 
-    const result = createGameWithRoster(gameData)
+    const result = await createGameWithRoster(gameData)
 
     expect(mockDb.insert).toHaveBeenCalled()
-    expect(result).toEqual(createdGame)
+    expect(result).toMatchObject({ id: 'g1', ...gameData })
+    expect(result.createdAt).toBeInstanceOf(Date)
   })
 
-  it('seeds a game_player row for each rostered player', () => {
-    const createdGame = { id: 'g1', ...gameData }
-    mockDb.get.mockReturnValue(createdGame)
+  it('seeds a game_player row for each rostered player', async () => {
     mockDb.all.mockReturnValue([{ playerId: 'p1' }, { playerId: 'p2' }, { playerId: 'p3' }])
 
-    createGameWithRoster(gameData)
+    await createGameWithRoster(gameData)
 
     // insert called once for the game + once per player = 4
     expect(mockDb.insert).toHaveBeenCalledTimes(4)
-    expect(mockDb.run).toHaveBeenCalledTimes(3)
+    expect(mockDb.run).toHaveBeenCalledTimes(4)
   })
 
-  it('seeds no game_player rows when roster is empty', () => {
-    mockDb.get.mockReturnValue({ id: 'g1', ...gameData })
+  it('seeds no game_player rows when roster is empty', async () => {
     mockDb.all.mockReturnValue([])
 
-    createGameWithRoster(gameData)
+    await createGameWithRoster(gameData)
 
-    expect(mockDb.run).not.toHaveBeenCalled()
+    expect(mockDb.insert).toHaveBeenCalledTimes(1)
+    expect(mockDb.run).toHaveBeenCalledTimes(1)
   })
 
-  it('passes attendance as "unknown" for each seeded player', () => {
-    mockDb.get.mockReturnValue({ id: 'g1', ...gameData })
+  it('passes attendance as "unknown" for each seeded player', async () => {
     mockDb.all.mockReturnValue([{ playerId: 'p1' }])
 
-    createGameWithRoster(gameData)
+    await createGameWithRoster(gameData)
 
     const valuesCall = mockDb.values.mock.calls.find(
       ([arg]) => arg && 'attendance' in arg

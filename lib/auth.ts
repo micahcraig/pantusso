@@ -16,7 +16,7 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null
 
-        const user = db.select().from(users).where(eq(users.email, credentials.email)).get()
+        const user = await db.select().from(users).where(eq(users.email, credentials.email)).get()
         if (!user || !user.isActive) return null
 
         const valid = bcrypt.compareSync(credentials.password, user.passwordHash)

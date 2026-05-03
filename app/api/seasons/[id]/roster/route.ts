@@ -9,7 +9,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const rows = db
+  const rows = await db
     .select({
       playerId:      players.id,
       name:          players.name,
@@ -35,7 +35,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   const { playerId } = await req.json() as { playerId: string }
   if (!playerId) return NextResponse.json({ error: 'playerId is required' }, { status: 400 })
 
-  db.insert(seasonRoster).values({
+  await db.insert(seasonRoster).values({
     seasonId:  params.id,
     playerId,
     createdAt: new Date(),

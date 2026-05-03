@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { randomUUID } from 'crypto'
 import { requireSession } from '@/lib/session'
 import { db } from '@/db'
 import { players } from '@/db/schema'
@@ -11,7 +12,7 @@ import type { Position } from '@/db/schema'
 export default async function RosterPage() {
   await requireSession()
 
-  const allPlayers = db.select().from(players).all()
+  const allPlayers = await db.select().from(players).all()
   const active   = allPlayers.filter(p =>  p.isActive).sort((a, b) => +a.jerseyNumber - +b.jerseyNumber)
   const inactive = allPlayers.filter(p => !p.isActive).sort((a, b) => +a.jerseyNumber - +b.jerseyNumber)
 
@@ -27,16 +28,17 @@ export default async function RosterPage() {
     const whatsapp = (data.get('whatsapp') as string)?.trim() || null
     const notes    = (data.get('notes')    as string)?.trim() || null
 
-    const row = db.insert(players).values({
-      name, jerseyNumber, preferredPositions,
+    const id = randomUUID()
+    await db.insert(players).values({
+      id, name, jerseyNumber, preferredPositions,
       phone, email, whatsapp, notes,
       isActive:  true,
       createdAt: new Date(),
       updatedAt: new Date(),
-    }).returning().get()
+    }).run()
 
     revalidatePath('/roster')
-    redirect(`/roster/${row.id}`)
+    redirect(`/roster/${id}`)
   }
 
   return (

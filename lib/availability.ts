@@ -3,13 +3,13 @@ import { db } from '@/db'
 import { players, seasonRoster, seasons, games, opponents, gamePlayers } from '@/db/schema'
 import type { AttendanceStatus } from '@/db/schema'
 
-export function lookupPlayerByToken(token: string) {
-  return db.select().from(players).where(eq(players.availabilityToken, token)).get() ?? null
+export async function lookupPlayerByToken(token: string) {
+  return (await db.select().from(players).where(eq(players.availabilityToken, token)).get()) ?? null
 }
 
-export function getUpcomingGames(playerId: string) {
+export async function getUpcomingGames(playerId: string) {
   // Most recent season this player is rostered on
-  const roster = db
+  const roster = await db
     .select({ seasonId: seasonRoster.seasonId, seasonName: seasons.name })
     .from(seasonRoster)
     .innerJoin(seasons, eq(seasonRoster.seasonId, seasons.id))
@@ -21,7 +21,7 @@ export function getUpcomingGames(playerId: string) {
 
   const today = new Date().toISOString().split('T')[0]
 
-  const rows = db
+  const rows = await db
     .select({
       gameId:       games.id,
       date:         games.date,
@@ -42,13 +42,13 @@ export function getUpcomingGames(playerId: string) {
   return { seasonName: roster.seasonName, games: rows }
 }
 
-export function setAttendance(
+export async function setAttendance(
   gameId:     string,
   playerId:   string,
   attendance: AttendanceStatus,
   note?:      string | null,
 ) {
-  const existing = db
+  const existing = await db
     .select({ id: gamePlayers.id, availabilitySetAt: gamePlayers.availabilitySetAt })
     .from(gamePlayers)
     .where(and(eq(gamePlayers.gameId, gameId), eq(gamePlayers.playerId, playerId)))
@@ -57,14 +57,14 @@ export function setAttendance(
   const now = new Date()
 
   if (existing) {
-    db.update(gamePlayers).set({
+    await db.update(gamePlayers).set({
       attendance,
       ...(note !== undefined ? { note } : {}),
       availabilitySetAt:     existing.availabilitySetAt ?? now,
       availabilityUpdatedAt: now,
     }).where(eq(gamePlayers.id, existing.id)).run()
   } else {
-    db.insert(gamePlayers).values({
+    await db.insert(gamePlayers).values({
       gameId, playerId, attendance,
       note:                  note ?? null,
       availabilitySetAt:     now,

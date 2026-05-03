@@ -13,7 +13,7 @@ import type { Position } from '@/db/schema'
 export default async function PlayerPage({ params }: { params: { id: string } }) {
   await requireSession()
 
-  const playerRow = db.select().from(players).where(eq(players.id, params.id)).get()
+  const playerRow = await db.select().from(players).where(eq(players.id, params.id)).get()
   if (!playerRow) notFound()
   const player = playerRow
 
@@ -28,7 +28,7 @@ export default async function PlayerPage({ params }: { params: { id: string } })
     const jerseyNumber = (data.get('jerseyNumber') as string).trim()
     if (!name || !jerseyNumber) return
 
-    db.update(players).set({
+    await db.update(players).set({
       name,
       jerseyNumber,
       preferredPositions: data.getAll('preferredPositions') as Position[],
@@ -46,7 +46,7 @@ export default async function PlayerPage({ params }: { params: { id: string } })
 
   async function toggleActive() {
     'use server'
-    db.update(players).set({ isActive: !player.isActive, updatedAt: new Date() })
+    await db.update(players).set({ isActive: !player.isActive, updatedAt: new Date() })
       .where(eq(players.id, params.id)).run()
     revalidatePath(`/roster/${params.id}`)
     revalidatePath('/roster')
@@ -55,7 +55,7 @@ export default async function PlayerPage({ params }: { params: { id: string } })
 
   async function resetToken() {
     'use server'
-    db.update(players).set({ availabilityToken: randomUUID(), updatedAt: new Date() })
+    await db.update(players).set({ availabilityToken: randomUUID(), updatedAt: new Date() })
       .where(eq(players.id, params.id)).run()
     revalidatePath(`/roster/${params.id}`)
   }

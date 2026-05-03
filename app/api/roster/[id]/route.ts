@@ -33,7 +33,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   if (body.isActive           !== undefined) updates.isActive           = body.isActive
   if (body.availabilityToken  !== undefined) updates.availabilityToken  = body.availabilityToken
 
-  const updated = db.update(players).set(updates).where(eq(players.id, params.id)).returning().get()
+  await db.update(players).set(updates).where(eq(players.id, params.id)).run()
+  const updated = await db.select().from(players).where(eq(players.id, params.id)).get()
   if (!updated) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   return NextResponse.json(updated)

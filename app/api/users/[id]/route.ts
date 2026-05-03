@@ -20,7 +20,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   if (body.role     !== undefined) updates.role     = body.role
   if (body.isActive !== undefined) updates.isActive = body.isActive
 
-  db.update(users).set(updates).where(eq(users.id, params.id)).run()
+  await db.update(users).set(updates).where(eq(users.id, params.id)).run()
 
   return NextResponse.json({ ok: true })
 }

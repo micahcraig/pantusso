@@ -154,7 +154,9 @@ cd docker
 docker compose up --build
 ```
 
-This builds the app inside Docker and runs `npm run dev` against a volume-mounted source tree. The SQLite database is persisted in the `db-data` Docker volume.
+This starts a MySQL 8.4 container and the app in dev mode. On first start the app container runs migrations and seeds the admin user before starting the Next.js dev server. MySQL data is persisted in the `mysql-data` Docker volume.
+
+Sign in at `http://localhost:3000` using the `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` values set in `docker-compose.yml` (defaults: `admin@example.com` / `changeme`).
 
 ---
 
@@ -167,10 +169,13 @@ This builds the app inside Docker and runs `npm run dev` against a volume-mounte
 | `start` | `next start` | Serve the production build locally |
 | `lint` | `next lint` | ESLint via `eslint-config-next` |
 | `typecheck` | `tsc --noEmit` | TypeScript type check without emitting files |
-| `test` | `vitest` | Run the Vitest test suite |
+| `test` | `vitest` | Run the Vitest unit test suite |
+| `test:e2e` | runs sqlite + mysql | Full E2E suite: SQLite run then MySQL run (requires Docker for MySQL) |
+| `test:e2e:sqlite` | `playwright test` | Playwright E2E tests against the local SQLite dev server |
+| `test:e2e:mysql` | `scripts/test-e2e-mysql.sh` | Playwright E2E tests against a temporary MySQL 8.4 Docker container on port 3307 |
 | `db:generate` | `drizzle-kit generate` | Diff `db/schema.ts` against existing migrations and generate a new SQL migration file |
 | `db:migrate` | `drizzle-kit migrate` | Apply all pending migrations to the database pointed to by `DATABASE_URL` |
-| `db:seed` | `tsx db/seed.ts` | Idempotent seed: creates the admin user, 12 sample players, a season, opponents, and games. Safe to re-run. |
+| `db:seed` | `tsx db/seed.ts` | Idempotent seed: creates the admin user from `SEED_ADMIN_*` env vars. Safe to re-run. |
 
 ---
 

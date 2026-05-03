@@ -50,7 +50,7 @@ jobs:
           SEED_ADMIN_EMAIL: admin@example.com
           SEED_ADMIN_PASSWORD: changeme
       - name: Run E2E tests
-        run: npm run test:e2e
+        run: npm run test:e2e:sqlite
         env:
           DATABASE_URL: sqlite:./dev.db
           NEXTAUTH_SECRET: ci-secret
@@ -63,9 +63,56 @@ jobs:
           path: playwright-report/
           retention-days: 7
 
+  e2e-mysql:
+    name: E2E tests (MySQL)
+    runs-on: ubuntu-latest
+    services:
+      db:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: devpassword
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -u root -pdevpassword --silent"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Migrate database
+        run: node scripts/migrate.js
+        env:
+          DATABASE_URL: mysql://root:devpassword@127.0.0.1:3306/pantusso_e2e
+      - name: Seed E2E data
+        run: node scripts/seed-e2e.js
+        env:
+          DATABASE_URL: mysql://root:devpassword@127.0.0.1:3306/pantusso_e2e
+          SEED_ADMIN_EMAIL: admin@example.com
+          SEED_ADMIN_PASSWORD: changeme
+      - name: Run E2E tests (MySQL)
+        run: npx playwright test --config playwright.mysql.config.ts
+        env:
+          DATABASE_URL: mysql://root:devpassword@127.0.0.1:3306/pantusso_e2e
+          NEXTAUTH_SECRET: ci-secret
+          NEXTAUTH_URL: http://localhost:3001
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report-mysql
+          path: playwright-report/
+          retention-days: 7
+
   build-and-push:
     name: Build and push Docker image
-    needs: [check, e2e]
+    needs: [check, e2e, e2e-mysql]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     permissions:

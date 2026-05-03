@@ -22,10 +22,10 @@ function fmtTime(t: string) {
 export default async function SeasonPage({ params }: { params: { id: string } }) {
   await requireAdmin()
 
-  const season = db.select().from(seasons).where(eq(seasons.id, params.id)).get()
+  const season = await db.select().from(seasons).where(eq(seasons.id, params.id)).get()
   if (!season) notFound()
 
-  const gameRows = db
+  const gameRows = await db
     .select({
       id:            games.id,
       date:          games.date,
@@ -42,7 +42,7 @@ export default async function SeasonPage({ params }: { params: { id: string } })
     .orderBy(asc(games.date))
     .all()
 
-  const allOpponents = db.select().from(opponents).orderBy(asc(opponents.name)).all()
+  const allOpponents = await db.select().from(opponents).orderBy(asc(opponents.name)).all()
 
   // W / L / T / run diff from completed games
   const completed = gameRows.filter(g => g.status === 'completed')
@@ -72,7 +72,7 @@ export default async function SeasonPage({ params }: { params: { id: string } })
     const homeOrAway = data.get('homeOrAway') as HomeOrAway
     if (!opponentId || !date || !time || !location || !homeOrAway) return
 
-    createGameWithRoster({
+    await createGameWithRoster({
       seasonId: params.id,
       opponentId,
       date,

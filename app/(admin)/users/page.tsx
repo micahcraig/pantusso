@@ -9,7 +9,7 @@ import { users } from '@/db/schema'
 export default async function UsersPage() {
   const session = await requireAdmin()
 
-  const allUsers = db.select().from(users).orderBy(users.createdAt).all()
+  const allUsers = await db.select().from(users).orderBy(users.createdAt).all()
 
   async function createUser(data: FormData) {
     'use server'
@@ -17,7 +17,7 @@ export default async function UsersPage() {
     const email    = (data.get('email')    as string).trim()
     const password =  data.get('password') as string
     if (!name || !email || !password) return
-    db.insert(users).values({
+    await db.insert(users).values({
       id:           randomUUID(),
       name,
       email,
@@ -34,7 +34,7 @@ export default async function UsersPage() {
     'use server'
     const id       = data.get('id')       as string
     const isActive = data.get('isActive') === 'true'
-    db.update(users).set({ isActive: !isActive, updatedAt: new Date() }).where(eq(users.id, id)).run()
+    await db.update(users).set({ isActive: !isActive, updatedAt: new Date() }).where(eq(users.id, id)).run()
     revalidatePath('/users')
   }
 

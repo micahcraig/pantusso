@@ -3,10 +3,10 @@ import { lookupPlayerByToken, getUpcomingGames, setAttendance } from '@/lib/avai
 import type { AttendanceStatus } from '@/db/schema'
 
 export async function GET(_req: Request, { params }: { params: { token: string } }) {
-  const player = lookupPlayerByToken(params.token)
+  const player = await lookupPlayerByToken(params.token)
   if (!player) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const { seasonName, games } = getUpcomingGames(player.id)
+  const { seasonName, games } = await getUpcomingGames(player.id)
 
   return NextResponse.json({
     player:     { id: player.id, name: player.name },
@@ -16,7 +16,7 @@ export async function GET(_req: Request, { params }: { params: { token: string }
 }
 
 export async function PATCH(req: Request, { params }: { params: { token: string } }) {
-  const player = lookupPlayerByToken(params.token)
+  const player = await lookupPlayerByToken(params.token)
   if (!player) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   const { updates } = await req.json() as {
@@ -28,7 +28,7 @@ export async function PATCH(req: Request, { params }: { params: { token: string 
   }
 
   for (const { gameId, attendance, note } of updates) {
-    setAttendance(gameId, player.id, attendance, note)
+    await setAttendance(gameId, player.id, attendance, note)
   }
 
   return NextResponse.json({ ok: true })

@@ -27,13 +27,16 @@ Full spec: `~/Downloads/softball-handoff.docx`
 ## Key commands
 
 ```bash
-npm run dev          # start dev server
-npm run typecheck    # tsc --noEmit (run this before declaring anything done)
-npm run lint         # eslint
-npm run test         # vitest
-npm run db:generate  # drizzle-kit generate — create migration after schema change
-npm run db:migrate   # drizzle-kit migrate — apply pending migrations
-npm run db:seed      # tsx db/seed.ts — idempotent, safe to re-run
+npm run dev              # start dev server
+npm run typecheck        # tsc --noEmit (run this before declaring anything done)
+npm run lint             # eslint
+npm run test             # vitest
+npm run test:e2e:sqlite  # Playwright E2E against local SQLite dev server
+npm run test:e2e:mysql   # Playwright E2E against a temporary MySQL Docker container (requires Docker)
+npm run test:e2e         # runs both test:e2e:sqlite and test:e2e:mysql
+npm run db:generate      # drizzle-kit generate — create migration after schema change
+npm run db:migrate       # drizzle-kit migrate — apply pending migrations
+npm run db:seed          # tsx db/seed.ts — idempotent, safe to re-run
 ```
 
 ---

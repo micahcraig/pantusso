@@ -3,11 +3,11 @@ import { lookupPlayerByToken, getUpcomingGames } from '@/lib/availability'
 import AvailabilityForm from './AvailabilityForm'
 import type { GameRow } from './AvailabilityForm'
 
-export default function AvailabilityPage({ params }: { params: { token: string } }) {
-  const player = lookupPlayerByToken(params.token)
+export default async function AvailabilityPage({ params }: { params: { token: string } }) {
+  const player = await lookupPlayerByToken(params.token)
   if (!player) notFound()
 
-  const { seasonName, games } = getUpcomingGames(player.id)
+  const { seasonName, games } = await getUpcomingGames(player.id)
 
   const gameRows: GameRow[] = games.map(g => ({
     gameId:       g.gameId,

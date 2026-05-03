@@ -31,7 +31,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   if (body.ourScore      !== undefined) updates.ourScore      = body.ourScore
   if (body.opponentScore !== undefined) updates.opponentScore = body.opponentScore
 
-  const updated = db.update(games).set(updates).where(eq(games.id, params.id)).returning().get()
+  await db.update(games).set(updates).where(eq(games.id, params.id)).run()
+  const updated = await db.select().from(games).where(eq(games.id, params.id)).get()
   if (!updated) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   return NextResponse.json(updated)

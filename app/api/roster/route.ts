@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
+import { randomUUID } from 'crypto'
 import { authOptions } from '@/lib/auth'
 import { db } from '@/db'
 import { players } from '@/db/schema'
@@ -10,7 +11,7 @@ export async function GET() {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const all = db.select().from(players).where(eq(players.isActive, true)).all()
+  const all = await db.select().from(players).where(eq(players.isActive, true)).all()
   return NextResponse.json(all)
 }
 
@@ -32,18 +33,23 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'name and jerseyNumber are required' }, { status: 400 })
   }
 
-  const player = db.insert(players).values({
+  const id = randomUUID()
+  const now = new Date()
+  const player = {
+    id,
     name:               body.name,
     jerseyNumber:       body.jerseyNumber,
-    preferredPositions: body.preferredPositions ?? [],
+    preferredPositions: body.preferredPositions ?? [] as Position[],
     phone:              body.phone    ?? null,
     email:              body.email    ?? null,
     whatsapp:           body.whatsapp ?? null,
     notes:              body.notes    ?? null,
     isActive:           true,
-    createdAt:          new Date(),
-    updatedAt:          new Date(),
-  }).returning().get()
+    createdAt:          now,
+    updatedAt:          now,
+  }
+
+  await db.insert(players).values(player).run()
 
   return NextResponse.json(player, { status: 201 })
 }

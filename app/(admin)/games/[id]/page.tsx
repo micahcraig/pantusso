@@ -23,7 +23,7 @@ function fmtTime(t: string) {
 export default async function GamePage({ params }: { params: { id: string } }) {
   await requireSession()
 
-  const game = db
+  const game = await db
     .select({
       id:            games.id,
       date:          games.date,
@@ -46,7 +46,7 @@ export default async function GamePage({ params }: { params: { id: string } }) {
   if (!game) notFound()
   const gameRow = game
 
-  const attendanceRows: AttendanceRow[] = db
+  const attendanceRows: AttendanceRow[] = await db
     .select({
       playerId:           players.id,
       name:               players.name,
@@ -61,7 +61,7 @@ export default async function GamePage({ params }: { params: { id: string } }) {
     .orderBy(players.name)
     .all()
 
-  const savedLineup: LineupEntry[] = db
+  const savedLineup: LineupEntry[] = (await db
     .select({
       playerId:     lineupEntries.playerId,
       battingOrder: lineupEntries.battingOrder,
@@ -70,7 +70,7 @@ export default async function GamePage({ params }: { params: { id: string } }) {
     })
     .from(lineupEntries)
     .where(eq(lineupEntries.gameId, params.id))
-    .all()
+    .all())
     .map(e => ({
       playerId:     e.playerId,
       battingOrder: e.battingOrder ?? null,
@@ -83,7 +83,7 @@ export default async function GamePage({ params }: { params: { id: string } }) {
     const ourScore      = parseInt(data.get('ourScore')      as string, 10)
     const opponentScore = parseInt(data.get('opponentScore') as string, 10)
     if (isNaN(ourScore) || isNaN(opponentScore)) return
-    db.update(games).set({ ourScore, opponentScore, status: 'completed', updatedAt: new Date() })
+    await db.update(games).set({ ourScore, opponentScore, status: 'completed', updatedAt: new Date() })
       .where(eq(games.id, params.id)).run()
     revalidatePath(`/games/${params.id}`)
     revalidatePath(`/seasons/${gameRow.seasonId}`)
@@ -91,7 +91,7 @@ export default async function GamePage({ params }: { params: { id: string } }) {
 
   async function revertToScheduled() {
     'use server'
-    db.update(games).set({ status: 'scheduled', ourScore: null, opponentScore: null, updatedAt: new Date() })
+    await db.update(games).set({ status: 'scheduled', ourScore: null, opponentScore: null, updatedAt: new Date() })
       .where(eq(games.id, params.id)).run()
     revalidatePath(`/games/${params.id}`)
     revalidatePath(`/seasons/${gameRow.seasonId}`)
@@ -99,7 +99,7 @@ export default async function GamePage({ params }: { params: { id: string } }) {
 
   async function cancelGame() {
     'use server'
-    db.update(games).set({ status: 'cancelled', updatedAt: new Date() })
+    await db.update(games).set({ status: 'cancelled', updatedAt: new Date() })
       .where(eq(games.id, params.id)).run()
     revalidatePath(`/games/${params.id}`)
     revalidatePath(`/seasons/${gameRow.seasonId}`)

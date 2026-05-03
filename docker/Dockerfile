@@ -12,6 +12,9 @@ FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+# Provide a MySQL URL so db/index.ts takes the mysql2 path (no native SQLite addon loaded).
+# mysql2 pools are lazy — no actual connection is made during build.
+ENV DATABASE_URL=mysql://build:build@localhost:3306/build
 RUN npm run build
 
 # Production runner

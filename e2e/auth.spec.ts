@@ -23,7 +23,7 @@ test('logs in successfully and lands on /seasons', async ({ page }) => {
   await page.getByLabel('Email').fill('admin@example.com')
   await page.getByLabel('Password').fill('changeme')
   await page.getByRole('button', { name: 'Sign in' }).click()
-  await expect(page).toHaveURL(/\/seasons/)
+  await page.waitForURL(/\/seasons/)
   await expect(page.getByRole('heading', { name: 'Seasons' })).toBeVisible()
 })
 

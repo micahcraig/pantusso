@@ -14,7 +14,7 @@ export async function DELETE(
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  db.delete(seasonRoster)
+  await db.delete(seasonRoster)
     .where(and(eq(seasonRoster.seasonId, params.id), eq(seasonRoster.playerId, params.playerId)))
     .run()
 

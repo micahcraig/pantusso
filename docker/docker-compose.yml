@@ -1,26 +1,41 @@
-version: '3.9'
-
 services:
+  db:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: devpassword
+      MYSQL_DATABASE: pantusso
+    ports:
+      - '3306:3306'
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pdevpassword"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    volumes:
+      - mysql-data:/var/lib/mysql
+
   app:
     build:
       context: ..
       dockerfile: docker/Dockerfile
       target: builder
-    command: npm run dev
+    command: sh -c "node scripts/migrate.js && node scripts/seed.js && npm run dev"
     ports:
       - '3000:3000'
     environment:
-      DATABASE_URL: sqlite:/app/dev.db
+      DATABASE_URL: mysql://root:devpassword@db:3306/pantusso
       NEXTAUTH_SECRET: dev-secret-replace-in-production
       NEXTAUTH_URL: http://localhost:3000
-      SEED_ADMIN_NAME: Admin
       SEED_ADMIN_EMAIL: admin@example.com
       SEED_ADMIN_PASSWORD: changeme
     volumes:
       - ..:/app
       - /app/node_modules    # keep container node_modules separate from host
-      - db-data:/app/data    # SQLite database directory
+      - /app/.next           # keep .next separate from host (container runs as root)
+    depends_on:
+      db:
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:
-  db-data:
+  mysql-data:

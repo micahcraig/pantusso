@@ -9,7 +9,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const rows = db
+  const rows = await db
     .select({
       id:            games.id,
       date:          games.date,
