@@ -10,6 +10,17 @@ if (url.startsWith('mysql://') || url.startsWith('mysql2://')) {
     const { createConnection } = require('mysql2/promise')
     const { drizzle } = require('drizzle-orm/mysql2')
     const { migrate } = require('drizzle-orm/mysql2/migrator')
+
+    // Extract database name and build a URL without it so we can CREATE DATABASE
+    const parsed   = new URL(url)
+    const dbName   = parsed.pathname.replace(/^\//, '')
+    parsed.pathname = '/'
+    const rootUrl  = parsed.toString()
+
+    const root = await createConnection(rootUrl)
+    await root.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\``)
+    await root.end()
+
     const conn = await createConnection(url)
     await migrate(drizzle(conn), { migrationsFolder })
     await conn.end()
