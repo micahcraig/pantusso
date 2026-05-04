@@ -16,7 +16,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         </Link>
         <NavLinks isAdmin={isAdmin} />
         <div className="nav-user">
-          <span>{session.user.name}</span>
+          <Link href="/account" style={{ fontSize: 14, color: 'inherit', textDecoration: 'none' }}>
+            {session.user.name}
+          </Link>
           <SignOutButton />
         </div>
       </header>
