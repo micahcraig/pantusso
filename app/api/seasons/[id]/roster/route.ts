@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { eq } from 'drizzle-orm'
+import { and, eq, ne } from 'drizzle-orm'
 import { authOptions } from '@/lib/auth'
 import { db } from '@/db'
-import { seasonRoster, players } from '@/db/schema'
+import { seasonRoster, players, games, gamePlayers } from '@/db/schema'
 
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions)
@@ -40,6 +40,17 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     playerId,
     createdAt: new Date(),
   }).run()
+
+  // Back-fill game_players for any games already scheduled in this season.
+  const seasonGames = await db
+    .select({ id: games.id })
+    .from(games)
+    .where(and(eq(games.seasonId, params.id), ne(games.status, 'cancelled')))
+    .all()
+
+  for (const { id: gameId } of seasonGames) {
+    await db.insert(gamePlayers).values({ gameId, playerId, attendance: 'unknown' }).run()
+  }
 
   return NextResponse.json({ ok: true }, { status: 201 })
 }

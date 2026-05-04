@@ -15,6 +15,13 @@
       "when": 1777124424033,
       "tag": "0001_light_matthew_murdock",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1746230400000,
+      "tag": "0002_backfill_game_players",
+      "breakpoints": true
     }
   ]
 }
