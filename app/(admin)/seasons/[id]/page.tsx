@@ -1,10 +1,10 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
-import { eq, asc } from 'drizzle-orm'
+import { eq, asc, inArray } from 'drizzle-orm'
 import { requireAdmin } from '@/lib/session'
 import { db } from '@/db'
-import { seasons, games, opponents } from '@/db/schema'
+import { seasons, games, opponents, gamePlayers, players } from '@/db/schema'
 import { createGameWithRoster } from '@/lib/games'
 import type { HomeOrAway } from '@/db/schema'
 import ExportButton from './ExportButton'
@@ -44,6 +44,31 @@ export default async function SeasonPage({ params }: { params: { id: string } })
     .all()
 
   const allOpponents = await db.select().from(opponents).orderBy(asc(opponents.name)).all()
+
+  // Attendance summary per game
+  const gameIds = gameRows.map(g => g.id)
+  const attendanceRows = gameIds.length > 0
+    ? await db
+        .select({
+          gameId:     gamePlayers.gameId,
+          playerName: players.name,
+          attendance: gamePlayers.attendance,
+        })
+        .from(gamePlayers)
+        .innerJoin(players, eq(gamePlayers.playerId, players.id))
+        .where(inArray(gamePlayers.gameId, gameIds))
+        .all()
+    : []
+
+  type AttSummary = { confirmed: string[]; maybe: string[]; out: string[] }
+  const attByGame = new Map<string, AttSummary>()
+  for (const row of attendanceRows) {
+    if (!attByGame.has(row.gameId)) attByGame.set(row.gameId, { confirmed: [], maybe: [], out: [] })
+    const s = attByGame.get(row.gameId)!
+    if      (row.attendance === 'confirmed') s.confirmed.push(row.playerName)
+    else if (row.attendance === 'maybe')     s.maybe.push(row.playerName)
+    else if (row.attendance === 'out')       s.out.push(row.playerName)
+  }
 
   // W / L / T / run diff from completed games
   const completed = gameRows.filter(g => g.status === 'completed')
@@ -171,31 +196,64 @@ export default async function SeasonPage({ params }: { params: { id: string } })
           <p style={{ color: '#9ca3af', textAlign: 'center', padding: '24px 0' }}>No games scheduled yet.</p>
         ) : (
           <div>
-            {gameRows.map((g, i) => (
-              <Link
-                key={g.id}
-                href={`/games/${g.id}`}
-                className="list-row"
-                style={{
-                  borderBottom: i < gameRows.length - 1 ? '1px solid #e5e7eb' : 'none',
-                  opacity:      g.status === 'cancelled' ? 0.5 : 1,
-                }}
-              >
-                <div style={{ minWidth: 80, flexShrink: 0 }}>
-                  <div style={{ fontWeight: 500, fontSize: 14 }}>{fmtDate(g.date)}</div>
-                  <div style={{ fontSize: 12, color: '#9ca3af' }}>{fmtTime(g.time)}</div>
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 500, fontSize: 14 }}>{g.opponentName}</div>
-                  <div style={{ fontSize: 12, color: '#6b7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {g.location}
+            {gameRows.map((g, i) => {
+              const att = attByGame.get(g.id) ?? { confirmed: [], maybe: [], out: [] }
+              const hasAtt = att.confirmed.length + att.maybe.length + att.out.length > 0
+              const attCounts: { names: string[]; bg: string; color: string }[] = [
+                { names: att.confirmed, bg: '#dcfce7', color: '#166534' },
+                { names: att.maybe,     bg: '#fef3c7', color: '#92400e' },
+                { names: att.out,       bg: '#fee2e2', color: '#991b1b' },
+              ]
+              return (
+                <details
+                  key={g.id}
+                  className="game-row"
+                  style={{
+                    borderBottom: i < gameRows.length - 1 ? '1px solid #e5e7eb' : 'none',
+                    opacity:      g.status === 'cancelled' ? 0.5 : 1,
+                  }}
+                >
+                  <summary>
+                    <div style={{ minWidth: 80, flexShrink: 0 }}>
+                      <div style={{ fontWeight: 500, fontSize: 14 }}>{fmtDate(g.date)}</div>
+                      <div style={{ fontSize: 12, color: '#9ca3af' }}>{fmtTime(g.time)}</div>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 500, fontSize: 14 }}>{g.opponentName}</div>
+                      <div style={{ fontSize: 12, color: '#6b7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {g.location}
+                      </div>
+                      {hasAtt && (
+                        <div style={{ display: 'flex', gap: 4, marginTop: 5, flexWrap: 'wrap' }}>
+                          {attCounts.map(({ names, bg, color }) => names.length > 0 && (
+                            <span key={color} style={{ background: bg, color, borderRadius: 5, padding: '1px 7px', fontSize: 12, fontWeight: 600 }}>
+                              {names.length}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ flexShrink: 0, textAlign: 'right' }}>
+                      {statusCell(g)}
+                    </div>
+                  </summary>
+                  <div className="game-row-body">
+                    {hasAtt ? (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px', marginBottom: 10 }}>
+                        {attCounts.map(({ names, color }) => names.map(name => (
+                          <span key={name} style={{ fontSize: 13, color }}>{name}</span>
+                        )))}
+                      </div>
+                    ) : (
+                      <p style={{ fontSize: 13, color: '#9ca3af', marginBottom: 10 }}>No responses yet.</p>
+                    )}
+                    <Link href={`/games/${g.id}`} className="btn btn-secondary btn-sm">
+                      View Game →
+                    </Link>
                   </div>
-                </div>
-                <div style={{ flexShrink: 0, textAlign: 'right' }}>
-                  {statusCell(g)}
-                </div>
-              </Link>
-            ))}
+                </details>
+              )
+            })}
           </div>
         )}
       </div>

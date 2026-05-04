@@ -151,6 +151,23 @@ h2 { font-size: 18px; font-weight: 600; margin-bottom: 16px; }
   border-radius: 6px;
 }
 .list-row:hover { background: #f5f5f5; text-decoration: none; }
+.game-row { padding: 0; }
+.game-row > summary {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  list-style: none;
+  cursor: pointer;
+  padding: 12px 20px;
+  margin: 0 -20px;
+  border-radius: 6px;
+  transition: background 0.1s;
+}
+.game-row > summary:hover { background: #f5f5f5; }
+.game-row > summary::-webkit-details-marker { display: none; }
+.game-row-body { padding: 0 0 12px; }
+
 .opponent-row { padding: 0; }
 .opponent-row > summary { padding: 12px 0; margin: 0 -20px; padding-left: 20px; padding-right: 20px; border-radius: 6px; transition: background 0.1s; }
 .opponent-row > summary:hover { background: #f5f5f5; }
