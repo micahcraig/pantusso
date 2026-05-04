@@ -1,10 +1,11 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
-import { and, eq } from 'drizzle-orm'
+import { randomUUID } from 'crypto'
+import { and, eq, inArray, ne } from 'drizzle-orm'
 import { requireAdmin } from '@/lib/session'
 import { db } from '@/db'
-import { seasons, seasonRoster, players } from '@/db/schema'
+import { seasons, seasonRoster, players, games, gamePlayers } from '@/db/schema'
 
 export default async function SeasonRosterPage({ params }: { params: { id: string } }) {
   await requireAdmin()
@@ -47,11 +48,54 @@ export default async function SeasonRosterPage({ params }: { params: { id: strin
     revalidatePath(`/seasons/${params.id}/roster`)
   }
 
+  async function syncRoster() {
+    'use server'
+    const seasonId = params.id
+
+    const seasonGames = await db
+      .select({ id: games.id })
+      .from(games)
+      .where(and(eq(games.seasonId, seasonId), ne(games.status, 'cancelled')))
+      .all()
+
+    if (seasonGames.length === 0) { revalidatePath(`/seasons/${seasonId}/roster`); return }
+
+    const roster = await db
+      .select({ playerId: seasonRoster.playerId })
+      .from(seasonRoster)
+      .where(eq(seasonRoster.seasonId, seasonId))
+      .all()
+
+    if (roster.length === 0) { revalidatePath(`/seasons/${seasonId}/roster`); return }
+
+    const gameIds = seasonGames.map(g => g.id)
+    const existing = await db
+      .select({ gameId: gamePlayers.gameId, playerId: gamePlayers.playerId })
+      .from(gamePlayers)
+      .where(inArray(gamePlayers.gameId, gameIds))
+      .all()
+
+    const existingSet = new Set(existing.map(e => `${e.gameId}:${e.playerId}`))
+
+    for (const { id: gameId } of seasonGames) {
+      for (const { playerId } of roster) {
+        if (!existingSet.has(`${gameId}:${playerId}`)) {
+          await db.insert(gamePlayers).values({ gameId, playerId, attendance: 'unknown' }).run()
+        }
+      }
+    }
+
+    revalidatePath(`/seasons/${seasonId}/roster`)
+  }
+
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
         <Link href={`/seasons/${params.id}`} style={{ color: '#6b7280', fontSize: 14 }}>← {season.name}</Link>
-        <h1 style={{ margin: 0 }}>Season Roster</h1>
+        <h1 style={{ margin: 0, flex: 1 }}>Season Roster</h1>
+        <form action={syncRoster}>
+          <button type="submit" className="btn btn-secondary btn-sm">Sync Roster to Upcoming Games</button>
+        </form>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
