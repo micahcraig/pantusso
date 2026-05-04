@@ -7,8 +7,8 @@ export default defineConfig({
     exclude: ['node_modules', 'e2e/**'],
     coverage: {
       provider: 'v8',
-      include: ['lib/**/*.ts', 'components/**/*.ts'],
-      exclude: ['**/*.test.ts'],
+      include: ['lib/**/*.ts', 'components/**/*.ts', 'app/api/**/*.ts'],
+      exclude: ['**/*.test.ts', 'app/api/auth/**'],
       reporter: ['text', 'html'],
     },
   },
