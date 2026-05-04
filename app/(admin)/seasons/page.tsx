@@ -6,6 +6,7 @@ import { randomUUID } from 'crypto'
 import { requireAdmin } from '@/lib/session'
 import { db } from '@/db'
 import { seasons } from '@/db/schema'
+import ImportSeasonButton from './ImportSeasonButton'
 
 function fmtDate(d: string) {
   return new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
@@ -38,6 +39,7 @@ export default async function SeasonsPage() {
     <>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <h1 style={{ margin: 0 }}>Seasons</h1>
+        <ImportSeasonButton />
       </div>
 
       <div className="card">

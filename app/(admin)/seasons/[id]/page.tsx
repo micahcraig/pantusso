@@ -7,6 +7,7 @@ import { db } from '@/db'
 import { seasons, games, opponents } from '@/db/schema'
 import { createGameWithRoster } from '@/lib/games'
 import type { HomeOrAway } from '@/db/schema'
+import ExportButton from './ExportButton'
 
 
 function fmtDate(d: string) {
@@ -119,7 +120,10 @@ export default async function SeasonPage({ params }: { params: { id: string } })
             {new Date(season.endDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
           </p>
         </div>
-        <Link href={`/seasons/${params.id}/roster`} className="btn btn-secondary btn-sm">Manage Roster</Link>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+          <ExportButton seasonId={params.id} seasonName={season.name} />
+          <Link href={`/seasons/${params.id}/roster`} className="btn btn-secondary btn-sm">Manage Roster</Link>
+        </div>
       </div>
 
       {/* Record */}
