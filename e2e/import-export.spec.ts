@@ -140,5 +140,5 @@ test('imported season appears in the seasons list', async ({ page }) => {
 
   // Navigate back to seasons list and confirm it appears
   await page.goto('/seasons')
-  await expect(page.getByText('List Visibility Import')).toBeVisible()
+  await expect(page.getByText('List Visibility Import').first()).toBeVisible()
 })

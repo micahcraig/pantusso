@@ -10,6 +10,7 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test": "vitest",
+    "test:all": "npm run test:coverage && npm run test:e2e",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "npm run test:e2e:sqlite && npm run test:e2e:mysql",
     "test:e2e:sqlite": "playwright test",

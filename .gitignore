@@ -32,5 +32,8 @@ npm-debug.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# coverage
+coverage/
+
 # Claude
 .claude/
