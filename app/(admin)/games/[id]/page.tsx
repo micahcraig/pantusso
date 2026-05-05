@@ -1,13 +1,16 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
+import { randomUUID } from 'crypto'
 import { eq } from 'drizzle-orm'
 import { requireSession } from '@/lib/session'
 import { db } from '@/db'
-import { games, opponents, seasons, gamePlayers, players, lineupEntries } from '@/db/schema'
+import { games, opponents, seasons, gamePlayers, players, lineupEntries, seasonRoster } from '@/db/schema'
 import GameDetail from './GameDetail'
+import PositionCheckboxes from '@/components/PositionCheckboxes'
 import type { AttendanceRow } from './AttendancePanel'
 import type { LineupEntry } from '@/components/lineup-editor-wrapper'
+import type { Position } from '@/db/schema'
 
 function fmtDate(d: string) {
   return new Date(d + 'T12:00:00').toLocaleDateString('en-US', {
@@ -101,6 +104,45 @@ export default async function GamePage({ params }: { params: { id: string } }) {
     'use server'
     await db.update(games).set({ status: 'cancelled', updatedAt: new Date() })
       .where(eq(games.id, params.id)).run()
+    revalidatePath(`/games/${params.id}`)
+    revalidatePath(`/seasons/${gameRow.seasonId}`)
+  }
+
+  async function addRinger(data: FormData) {
+    'use server'
+    const name         = (data.get('name')         as string).trim()
+    const jerseyNumber = (data.get('jerseyNumber') as string)?.trim() || null
+    if (!name) return
+
+    const preferredPositions = data.getAll('preferredPositions') as Position[]
+    const phone    = (data.get('phone')    as string)?.trim() || null
+    const email    = (data.get('email')    as string)?.trim() || null
+    const whatsapp = (data.get('whatsapp') as string)?.trim() || null
+    const notes    = (data.get('notes')    as string)?.trim() || null
+
+    const playerId = randomUUID()
+    const now      = new Date()
+
+    await db.insert(players).values({
+      id: playerId, name, jerseyNumber, preferredPositions,
+      phone, email, whatsapp, notes,
+      isActive:  true,
+      createdAt: now,
+      updatedAt: now,
+    }).run()
+
+    await db.insert(seasonRoster).values({
+      seasonId:  gameRow.seasonId,
+      playerId,
+      createdAt: now,
+    }).run()
+
+    await db.insert(gamePlayers).values({
+      gameId:     params.id,
+      playerId,
+      attendance: 'confirmed',
+    }).run()
+
     revalidatePath(`/games/${params.id}`)
     revalidatePath(`/seasons/${gameRow.seasonId}`)
   }
@@ -209,6 +251,53 @@ export default async function GamePage({ params }: { params: { id: string } }) {
             </details>
           )}
         </div>
+      )}
+
+      {game.status !== 'cancelled' && (
+        <details className="card mt-4">
+          <summary style={{ cursor: 'pointer', fontWeight: 600, fontSize: 15 }}>+ Add Ringer</summary>
+          <form action={addRinger} style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div className="form-row">
+              <div className="field">
+                <label htmlFor="ringer-name">Name *</label>
+                <input id="ringer-name" name="name" type="text" required placeholder="Full name" />
+              </div>
+              <div className="field">
+                <label htmlFor="ringer-jersey">Jersey #</label>
+                <input id="ringer-jersey" name="jerseyNumber" type="text" placeholder="e.g. 12" style={{ minWidth: 80, maxWidth: 100 }} />
+              </div>
+            </div>
+
+            <div className="field">
+              <label>Preferred Positions</label>
+              <PositionCheckboxes />
+            </div>
+
+            <div className="form-row">
+              <div className="field">
+                <label htmlFor="ringer-phone">Phone</label>
+                <input id="ringer-phone" name="phone" type="tel" placeholder="555-0100" />
+              </div>
+              <div className="field">
+                <label htmlFor="ringer-email">Email</label>
+                <input id="ringer-email" name="email" type="email" placeholder="player@example.com" />
+              </div>
+              <div className="field">
+                <label htmlFor="ringer-whatsapp">WhatsApp</label>
+                <input id="ringer-whatsapp" name="whatsapp" type="tel" placeholder="Optional" />
+              </div>
+            </div>
+
+            <div className="field">
+              <label htmlFor="ringer-notes">Notes</label>
+              <textarea id="ringer-notes" name="notes" rows={2} placeholder="Any notes about this player" style={{ resize: 'vertical' }} />
+            </div>
+
+            <div>
+              <button type="submit" className="btn btn-primary">Add Ringer</button>
+            </div>
+          </form>
+        </details>
       )}
 
       {game.status === 'scheduled' && (

@@ -25,8 +25,8 @@ export default async function PlayerPage({ params }: { params: { id: string } })
   async function updatePlayer(data: FormData) {
     'use server'
     const name         = (data.get('name')         as string).trim()
-    const jerseyNumber = (data.get('jerseyNumber') as string).trim()
-    if (!name || !jerseyNumber) return
+    const jerseyNumber = (data.get('jerseyNumber') as string)?.trim() || null
+    if (!name) return
 
     await db.update(players).set({
       name,
@@ -82,7 +82,7 @@ export default async function PlayerPage({ params }: { params: { id: string } })
               </div>
               <div className="field">
                 <label htmlFor="jerseyNumber">Jersey #</label>
-                <input id="jerseyNumber" name="jerseyNumber" type="text" required defaultValue={player.jerseyNumber} style={{ minWidth: 80, maxWidth: 100 }} />
+                <input id="jerseyNumber" name="jerseyNumber" type="text" defaultValue={player.jerseyNumber ?? ''} style={{ minWidth: 80, maxWidth: 100 }} />
               </div>
             </div>
 

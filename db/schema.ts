@@ -27,7 +27,7 @@ export const users = sqliteTable('users', {
 export const players = sqliteTable('players', {
   id:                 text('id').primaryKey().$defaultFn(() => randomUUID()),
   name:               text('name').notNull(),
-  jerseyNumber:       text('jersey_number').notNull(),
+  jerseyNumber:       text('jersey_number'),
   preferredPositions: text('preferred_positions', { mode: 'json' }).$type<Position[]>().notNull().default(sql`'[]'`),
   phone:              text('phone'),
   email:              text('email'),

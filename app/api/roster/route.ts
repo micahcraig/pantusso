@@ -29,8 +29,8 @@ export async function POST(req: Request) {
     notes?: string
   }
 
-  if (!body.name || !body.jerseyNumber) {
-    return NextResponse.json({ error: 'name and jerseyNumber are required' }, { status: 400 })
+  if (!body.name) {
+    return NextResponse.json({ error: 'name is required' }, { status: 400 })
   }
 
   const id = randomUUID()

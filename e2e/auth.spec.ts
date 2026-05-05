@@ -33,7 +33,7 @@ test('signs out and redirects to /login', async ({ page }) => {
   await page.getByLabel('Email').fill('admin@example.com')
   await page.getByLabel('Password').fill('changeme')
   await page.getByRole('button', { name: 'Sign in' }).click()
-  await page.waitForURL('**/seasons')
+  await page.waitForURL(/\/seasons/)
   await page.getByRole('button', { name: 'Sign out' }).click()
   await expect(page).toHaveURL(/\/login/)
 })

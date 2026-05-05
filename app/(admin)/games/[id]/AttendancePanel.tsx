@@ -6,7 +6,7 @@ import type { AttendanceStatus, Position } from '@/db/schema'
 export type AttendanceRow = {
   playerId:           string
   name:               string
-  jerseyNumber:       string
+  jerseyNumber:       string | null
   preferredPositions: Position[]
   attendance:         AttendanceStatus
   note:               string | null
@@ -35,7 +35,7 @@ export default function AttendancePanel({
   const byStatus = (s: AttendanceStatus) =>
     initialPlayers
       .filter(p => attendance[p.playerId] === s)
-      .sort((a, b) => +a.jerseyNumber - +b.jerseyNumber)
+      .sort((a, b) => a.name.localeCompare(b.name))
 
   const unknown   = byStatus('unknown')
   const confirmed = byStatus('confirmed')
@@ -198,7 +198,7 @@ function PlayerRow({
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <span style={{ width: 32, color: '#9ca3af', fontWeight: 600, fontSize: 13, flexShrink: 0 }}>
-          #{player.jerseyNumber}
+          {player.jerseyNumber ? `#${player.jerseyNumber}` : ''}
         </span>
         <span style={{ flex: 1, fontWeight: 500, fontSize: 14 }}>{player.name}</span>
         <div style={{ display: 'flex', gap: 6 }}>

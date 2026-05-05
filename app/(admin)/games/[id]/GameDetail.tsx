@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import AttendancePanel from './AttendancePanel'
 import LineupEditorWrapper from '@/components/lineup-editor-wrapper'
 import type { AttendanceRow } from './AttendancePanel'
@@ -25,6 +25,16 @@ export default function GameDetail({
   const [attendance, setAttendance] = useState<Record<string, AttendanceStatus>>(
     Object.fromEntries(allPlayers.map(p => [p.playerId, p.attendance]))
   )
+
+  useEffect(() => {
+    setAttendance(prev => {
+      const merged = { ...prev }
+      for (const p of allPlayers) {
+        if (!(p.playerId in merged)) merged[p.playerId] = p.attendance
+      }
+      return merged
+    })
+  }, [allPlayers])
 
   const confirmedPlayers = useMemo<PlayerSummary[]>(
     () => allPlayers

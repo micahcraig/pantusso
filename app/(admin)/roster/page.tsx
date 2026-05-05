@@ -13,14 +13,20 @@ export default async function RosterPage() {
   await requireSession()
 
   const allPlayers = await db.select().from(players).all()
-  const active   = allPlayers.filter(p =>  p.isActive).sort((a, b) => +a.jerseyNumber - +b.jerseyNumber)
-  const inactive = allPlayers.filter(p => !p.isActive).sort((a, b) => +a.jerseyNumber - +b.jerseyNumber)
+  const byJerseyThenName = (a: { jerseyNumber: string | null; name: string }, b: { jerseyNumber: string | null; name: string }) => {
+    if (a.jerseyNumber && b.jerseyNumber) return +a.jerseyNumber - +b.jerseyNumber
+    if (a.jerseyNumber) return -1
+    if (b.jerseyNumber) return 1
+    return a.name.localeCompare(b.name)
+  }
+  const active   = allPlayers.filter(p =>  p.isActive).sort(byJerseyThenName)
+  const inactive = allPlayers.filter(p => !p.isActive).sort(byJerseyThenName)
 
   async function createPlayer(data: FormData) {
     'use server'
     const name         = (data.get('name')         as string).trim()
-    const jerseyNumber = (data.get('jerseyNumber') as string).trim()
-    if (!name || !jerseyNumber) return
+    const jerseyNumber = (data.get('jerseyNumber') as string)?.trim() || null
+    if (!name) return
 
     const preferredPositions = data.getAll('preferredPositions') as Position[]
     const phone    = (data.get('phone')    as string)?.trim() || null
@@ -61,7 +67,7 @@ export default async function RosterPage() {
             style={{ borderBottom: i < active.length - 1 ? '1px solid #e5e7eb' : 'none' }}
           >
             <span style={{ width: 32, flexShrink: 0, fontWeight: 600, color: '#9ca3af', fontSize: 13 }}>
-              #{p.jerseyNumber}
+              {p.jerseyNumber ? `#${p.jerseyNumber}` : ''}
             </span>
             <span style={{ flex: 1, minWidth: 0 }}>
               <span style={{ fontWeight: 500, fontSize: 14 }}>{p.name}</span>
@@ -95,7 +101,7 @@ export default async function RosterPage() {
                 style={{ borderBottom: i < inactive.length - 1 ? '1px solid #e5e7eb' : 'none', opacity: 0.6 }}
               >
                 <span style={{ width: 32, flexShrink: 0, fontWeight: 600, color: '#9ca3af', fontSize: 13 }}>
-                  #{p.jerseyNumber}
+                  {p.jerseyNumber ? `#${p.jerseyNumber}` : ''}
                 </span>
                 <span style={{ flex: 1, fontWeight: 500, fontSize: 14 }}>{p.name}</span>
                 <span style={{ display: 'flex', flexWrap: 'wrap', gap: 4, justifyContent: 'flex-end' }}>
@@ -119,8 +125,8 @@ export default async function RosterPage() {
               <input id="name" name="name" type="text" required placeholder="Full name" />
             </div>
             <div className="field">
-              <label htmlFor="jerseyNumber">Jersey # *</label>
-              <input id="jerseyNumber" name="jerseyNumber" type="text" required placeholder="e.g. 12" style={{ minWidth: 80, maxWidth: 100 }} />
+              <label htmlFor="jerseyNumber">Jersey #</label>
+              <input id="jerseyNumber" name="jerseyNumber" type="text" placeholder="e.g. 12" style={{ minWidth: 80, maxWidth: 100 }} />
             </div>
           </div>
 

@@ -13,7 +13,7 @@
     "test:all": "npm run test:coverage && npm run test:e2e",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "npm run test:e2e:sqlite && npm run test:e2e:mysql",
-    "test:e2e:sqlite": "playwright test",
+    "test:e2e:sqlite": "bash scripts/run-e2e-sqlite.sh",
     "test:e2e:mysql": "bash scripts/test-e2e-mysql.sh",
     "test:e2e:ui": "playwright test --ui",
     "db:generate": "drizzle-kit generate",
@@ -21,7 +21,7 @@
     "db:seed": "tsx db/seed.ts"
   },
   "dependencies": {
-    "@micahcraig/ebbets": "^0.1.0",
+    "@micahcraig/ebbets": "^0.1.1",
     "bcryptjs": "^2.4.3",
     "better-sqlite3": "^9.6.0",
     "dotenv": "^17.4.2",

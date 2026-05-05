@@ -67,10 +67,13 @@ describe('POST /api/roster', () => {
     expect(res.status).toBe(400)
   })
 
-  it('returns 400 when jerseyNumber is missing', async () => {
+  it('creates player without jerseyNumber and returns 201', async () => {
     mockGetServerSession.mockResolvedValue(session)
+    mockDb.run.mockReturnValue(undefined)
     const res = await POST(makePost({ name: 'Alice' }))
-    expect(res.status).toBe(400)
+    expect(res.status).toBe(201)
+    const body = await res.json()
+    expect(body.jerseyNumber).toBeUndefined()
   })
 
   it('creates player and returns 201', async () => {

@@ -1,11 +1,24 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
+
+// Game rows are <details class="game-row"> with the opponent name inside <summary>.
+// We click the summary directly (not a child span) to avoid matching the
+// "Record by Opponent" stats section that also contains the opponent name.
+async function goToGame(page: Page, opponentPattern: RegExp) {
+  await page
+    .locator('details.game-row')
+    .filter({ hasText: opponentPattern })
+    .first()
+    .locator('summary')
+    .click()
+  await page.getByRole('link', { name: 'View Game →' }).first().click()
+  await page.waitForURL(/\/games\//)
+}
 
 test.beforeEach(async ({ page }) => {
   // Navigate to the first game (Diamond Devils, completed 8-4)
   await page.goto('/seasons')
   await page.getByText('Spring 2026').click()
-  await page.getByRole('link', { name: /Diamond Devils/ }).first().click()
-  await page.waitForURL(/\/games\//)
+  await goToGame(page, /Diamond Devils/)
 })
 
 test('shows game header with opponent and status badge', async ({ page }) => {
@@ -14,7 +27,6 @@ test('shows game header with opponent and status badge', async ({ page }) => {
 })
 
 test('shows the final score for a completed game', async ({ page }) => {
-  // Score is 8–3 displayed as "8" and "4"
   await expect(page.getByText('Win')).toBeVisible()
 })
 
@@ -25,7 +37,6 @@ test('attendance tab is active by default and shows players', async ({ page }) =
 
 test('switches to lineup tab', async ({ page }) => {
   await page.getByRole('button', { name: /Lineup/ }).click()
-  // Lineup tab is now active — lineup editor should mount
   await expect(page.getByRole('button', { name: /Lineup/ })).toBeVisible()
 })
 
@@ -36,7 +47,7 @@ test('shows breadcrumb back to season', async ({ page }) => {
 test('shows the Record Final Score section at the bottom for scheduled games', async ({ page }) => {
   // Navigate to a scheduled game instead
   await page.getByRole('link', { name: /Spring 2026/ }).click()
-  await page.getByRole('link', { name: /Riverside Renegades/ }).click()
+  await goToGame(page, /Riverside Renegades/)
   await expect(page.getByText('+ Record Final Score')).toBeVisible()
 })
 

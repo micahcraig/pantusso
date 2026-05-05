@@ -13,7 +13,7 @@ export type LineupEntry = {
 export type PlayerSummary = {
   id:                 string
   name:               string
-  jerseyNumber:       string
+  jerseyNumber:       string | null
   preferredPositions: Position[]
 }
 

@@ -19,7 +19,12 @@ export default async function SeasonRosterPage({ params }: { params: { id: strin
     .innerJoin(players, eq(seasonRoster.playerId, players.id))
     .where(eq(seasonRoster.seasonId, params.id))
     .all())
-    .sort((a, b) => +a.jerseyNumber - +b.jerseyNumber)
+    .sort((a, b) => {
+      if (a.jerseyNumber && b.jerseyNumber) return +a.jerseyNumber - +b.jerseyNumber
+      if (a.jerseyNumber) return -1
+      if (b.jerseyNumber) return 1
+      return a.name.localeCompare(b.name)
+    })
 
   const rosterIds = new Set(rosterRows.map(r => r.playerId))
 
@@ -29,7 +34,12 @@ export default async function SeasonRosterPage({ params }: { params: { id: strin
     .where(eq(players.isActive, true))
     .all())
     .filter(p => !rosterIds.has(p.id))
-    .sort((a, b) => +a.jerseyNumber - +b.jerseyNumber)
+    .sort((a, b) => {
+      if (a.jerseyNumber && b.jerseyNumber) return +a.jerseyNumber - +b.jerseyNumber
+      if (a.jerseyNumber) return -1
+      if (b.jerseyNumber) return 1
+      return a.name.localeCompare(b.name)
+    })
 
   async function addPlayer(data: FormData) {
     'use server'
@@ -109,7 +119,7 @@ export default async function SeasonRosterPage({ params }: { params: { id: strin
             <tbody>
               {rosterRows.map(p => (
                 <tr key={p.playerId}>
-                  <td style={{ width: 40, color: '#9ca3af', fontWeight: 600 }}>{p.jerseyNumber}</td>
+                  <td style={{ width: 40, color: '#9ca3af', fontWeight: 600 }}>{p.jerseyNumber ?? ''}</td>
                   <td style={{ fontWeight: 500 }}>{p.name}</td>
                   <td style={{ textAlign: 'right' }}>
                     <form action={removePlayer} style={{ display: 'inline' }}>
@@ -133,7 +143,7 @@ export default async function SeasonRosterPage({ params }: { params: { id: strin
             <tbody>
               {notOnRoster.map(p => (
                 <tr key={p.id}>
-                  <td style={{ width: 40, color: '#9ca3af', fontWeight: 600 }}>{p.jerseyNumber}</td>
+                  <td style={{ width: 40, color: '#9ca3af', fontWeight: 600 }}>{p.jerseyNumber ?? ''}</td>
                   <td style={{ fontWeight: 500 }}>{p.name}</td>
                   <td style={{ textAlign: 'right' }}>
                     <form action={addPlayer} style={{ display: 'inline' }}>

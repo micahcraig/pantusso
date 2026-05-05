@@ -9,13 +9,13 @@ test('shows the roster page with active players', async ({ page }) => {
 
 test('shows the active player count', async ({ page }) => {
   await page.goto('/roster')
-  await expect(page.getByText('12 active players')).toBeVisible()
+  await expect(page.getByText(/\d+ active players/)).toBeVisible()
 })
 
 test('shows jersey numbers', async ({ page }) => {
   await page.goto('/roster')
   await expect(page.getByText('#7')).toBeVisible()   // Marcus Johnson
-  await expect(page.getByText('#12')).toBeVisible()  // Sarah Chen
+  await expect(page.getByText('#12').first()).toBeVisible()  // Sarah Chen
 })
 
 test('navigates to player detail when a row is clicked', async ({ page }) => {

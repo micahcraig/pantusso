@@ -89,6 +89,18 @@ export default async function SeasonPage({ params }: { params: { id: string } })
     }, {} as Record<string, { name: string; w: number; l: number; t: number }>)
   ).sort((a, b) => a.name.localeCompare(b.name))
 
+  async function editSeason(data: FormData) {
+    'use server'
+    const name      = (data.get('name')      as string).trim()
+    const startDate = (data.get('startDate') as string).trim()
+    const endDate   = (data.get('endDate')   as string).trim()
+    if (!name || !startDate || !endDate) return
+    await db.update(seasons).set({ name, startDate, endDate, updatedAt: new Date() })
+      .where(eq(seasons.id, params.id)).run()
+    revalidatePath(`/seasons/${params.id}`)
+    revalidatePath('/seasons')
+  }
+
   async function addGame(data: FormData) {
     'use server'
     const opponentId = data.get('opponentId') as string
@@ -150,6 +162,30 @@ export default async function SeasonPage({ params }: { params: { id: string } })
           <Link href={`/seasons/${params.id}/roster`} className="btn btn-secondary btn-sm">Manage Roster</Link>
         </div>
       </div>
+
+      {/* Edit season */}
+      <details className="card mb-4">
+        <summary style={{ cursor: 'pointer', fontWeight: 600, fontSize: 15 }}>Edit Season</summary>
+        <form action={editSeason} style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div className="form-row">
+            <div className="field" style={{ flex: 1 }}>
+              <label htmlFor="season-name">Name *</label>
+              <input id="season-name" name="name" type="text" required defaultValue={season.name} />
+            </div>
+            <div className="field">
+              <label htmlFor="season-start">Start Date *</label>
+              <input id="season-start" name="startDate" type="date" required defaultValue={season.startDate} />
+            </div>
+            <div className="field">
+              <label htmlFor="season-end">End Date *</label>
+              <input id="season-end" name="endDate" type="date" required defaultValue={season.endDate} />
+            </div>
+          </div>
+          <div>
+            <button type="submit" className="btn btn-primary btn-sm">Save Changes</button>
+          </div>
+        </form>
+      </details>
 
       {/* Record */}
       {completed.length > 0 && (
