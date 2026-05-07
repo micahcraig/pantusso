@@ -3,12 +3,12 @@ import { notFound } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { randomUUID } from 'crypto'
 import { and, eq, inArray, ne } from 'drizzle-orm'
-import { requireAdmin } from '@/lib/session'
+import { requireSession } from '@/lib/session'
 import { db } from '@/db'
 import { seasons, seasonRoster, players, games, gamePlayers } from '@/db/schema'
 
 export default async function SeasonRosterPage({ params }: { params: { id: string } }) {
-  await requireAdmin()
+  await requireSession()
 
   const season = await db.select().from(seasons).where(eq(seasons.id, params.id)).get()
   if (!season) notFound()

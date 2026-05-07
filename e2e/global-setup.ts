@@ -46,9 +46,11 @@ export default async function globalSetup() {
   execSync('npx tsx db/seed.ts', {
     env: {
       ...process.env,
-      DATABASE_URL: TEST_DB_URL,
-      SEED_ADMIN_EMAIL: 'admin@example.com',
-      SEED_ADMIN_PASSWORD: 'changeme',
+      DATABASE_URL:          TEST_DB_URL,
+      SEED_ADMIN_EMAIL:      'admin@example.com',
+      SEED_ADMIN_PASSWORD:   'changeme',
+      SEED_MANAGER_EMAIL:    'manager@example.com',
+      SEED_MANAGER_PASSWORD: 'changeme',
     },
     stdio: 'inherit',
   })

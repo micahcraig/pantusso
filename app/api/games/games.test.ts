@@ -31,16 +31,17 @@ function makePost(body: unknown) {
 describe('POST /api/games', () => {
   beforeEach(() => { vi.clearAllMocks() })
 
-  it('returns 403 when not authenticated', async () => {
+  it('returns 401 when not authenticated', async () => {
     mockGetServerSession.mockResolvedValue(null)
     const res = await POST(makePost(validBody))
-    expect(res.status).toBe(403)
+    expect(res.status).toBe(401)
   })
 
-  it('returns 403 for manager role', async () => {
+  it('allows manager to create game', async () => {
     mockGetServerSession.mockResolvedValue(managerSession)
+    mockCreateGameWithRoster.mockResolvedValue({ id: 'g1', ...validBody })
     const res = await POST(makePost(validBody))
-    expect(res.status).toBe(403)
+    expect(res.status).toBe(201)
   })
 
   it('returns 400 when required fields are missing', async () => {

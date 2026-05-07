@@ -11,9 +11,9 @@ export default function NavLinks({ isAdmin }: { isAdmin: boolean }) {
   const links = [
     { href: '/seasons',   label: 'Seasons' },
     { href: '/roster',    label: 'Roster' },
+    { href: '/opponents', label: 'Opponents' },
     ...(isAdmin ? [
-      { href: '/opponents', label: 'Opponents' },
-      { href: '/users',     label: 'Users' },
+      { href: '/users', label: 'Users' },
     ] : []),
   ]
 

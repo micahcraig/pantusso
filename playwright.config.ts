@@ -1,5 +1,8 @@
 import { defineConfig, devices } from '@playwright/test'
 
+// Tests that exercise admin-only features (season import/export, user management).
+const ADMIN_SPECS = ['**/import-export.spec.ts']
+
 export default defineConfig({
   testDir:             './e2e',
   globalSetup:         './e2e/global-setup.ts',
@@ -14,17 +17,37 @@ export default defineConfig({
     screenshot:  'only-on-failure',
   },
   projects: [
+    // ── Auth setup ────────────────────────────────────────────────────────────
     {
-      name: 'setup',
-      testMatch: /auth\.setup\.ts/,
+      name:      'setup-admin',
+      testMatch: /auth\.setup\.ts$/,
     },
     {
-      name: 'chromium',
+      name:      'setup-manager',
+      testMatch: /auth\.setup\.manager\.ts$/,
+    },
+
+    // ── Manager project — most tests ──────────────────────────────────────────
+    // Uses a manager (non-admin) account to ensure pages work for the common role.
+    {
+      name: 'chromium-manager',
       use: {
         ...devices['Desktop Chrome'],
-        storageState: 'e2e/.auth/user.json',
+        storageState: 'e2e/.auth/manager.json',
       },
-      dependencies: ['setup'],
+      dependencies: ['setup-manager'],
+      testIgnore:   ADMIN_SPECS,
+    },
+
+    // ── Admin project — admin-only flows ─────────────────────────────────────
+    {
+      name: 'chromium-admin',
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: 'e2e/.auth/admin.json',
+      },
+      dependencies: ['setup-admin'],
+      testMatch: ADMIN_SPECS,
     },
   ],
   webServer: {

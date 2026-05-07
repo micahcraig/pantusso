@@ -49,6 +49,24 @@ db.insert(schema.users).values({
   updatedAt:    now(),
 }).run()
 
+// ── Manager user ──────────────────────────────────────────────────────────────
+
+const managerEmail    = process.env.SEED_MANAGER_EMAIL    ?? 'manager@example.com'
+const managerPassword = process.env.SEED_MANAGER_PASSWORD ?? 'changeme'
+const managerName     = managerEmail.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+
+console.log(`Creating manager user: ${managerEmail}`)
+db.insert(schema.users).values({
+  id:           id(),
+  name:         managerName,
+  email:        managerEmail,
+  passwordHash: bcrypt.hashSync(managerPassword, 10),
+  role:         'manager',
+  isActive:     true,
+  createdAt:    now(),
+  updatedAt:    now(),
+}).run()
+
 // ── Players ───────────────────────────────────────────────────────────────────
 
 type PlayerSeed = {

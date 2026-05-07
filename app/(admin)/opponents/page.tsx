@@ -1,11 +1,11 @@
 import { revalidatePath } from 'next/cache'
 import { eq, asc } from 'drizzle-orm'
-import { requireAdmin } from '@/lib/session'
+import { requireSession } from '@/lib/session'
 import { db } from '@/db'
 import { opponents } from '@/db/schema'
 
 export default async function OpponentsPage() {
-  await requireAdmin()
+  await requireSession()
 
   const allOpponents = await db.select().from(opponents).orderBy(asc(opponents.name)).all()
 

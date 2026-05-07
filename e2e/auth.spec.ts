@@ -24,6 +24,7 @@ test('logs in successfully and lands on /seasons', async ({ page }) => {
   await page.getByLabel('Password').fill('changeme')
   await page.getByRole('button', { name: 'Sign in' }).click()
   await page.waitForURL(/\/seasons/)
+  await page.waitForLoadState('networkidle')
   await expect(page.getByRole('heading', { name: 'Seasons' })).toBeVisible()
 })
 
@@ -34,6 +35,7 @@ test('signs out and redirects to /login', async ({ page }) => {
   await page.getByLabel('Password').fill('changeme')
   await page.getByRole('button', { name: 'Sign in' }).click()
   await page.waitForURL(/\/seasons/)
+  await page.waitForLoadState('networkidle')
   await page.getByRole('button', { name: 'Sign out' }).click()
   await expect(page).toHaveURL(/\/login/)
 })

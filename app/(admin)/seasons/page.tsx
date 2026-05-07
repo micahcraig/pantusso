@@ -3,7 +3,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { desc } from 'drizzle-orm'
 import { randomUUID } from 'crypto'
-import { requireAdmin } from '@/lib/session'
+import { requireSession } from '@/lib/session'
 import { db } from '@/db'
 import { seasons } from '@/db/schema'
 import ImportSeasonButton from './ImportSeasonButton'
@@ -13,7 +13,8 @@ function fmtDate(d: string) {
 }
 
 export default async function SeasonsPage() {
-  await requireAdmin()
+  const session = await requireSession()
+  const isAdmin = session.user.role === 'admin'
 
   const allSeasons = await db.select().from(seasons).orderBy(desc(seasons.startDate)).all()
 
@@ -39,7 +40,7 @@ export default async function SeasonsPage() {
     <>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <h1 style={{ margin: 0 }}>Seasons</h1>
-        <ImportSeasonButton />
+        {isAdmin && <ImportSeasonButton />}
       </div>
 
       <div className="card">
@@ -59,28 +60,30 @@ export default async function SeasonsPage() {
         ))}
       </div>
 
-      <details className="card mt-4">
-        <summary style={{ cursor: 'pointer', fontWeight: 600, fontSize: 15 }}>+ New Season</summary>
-        <form action={createSeason} style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <div className="form-row">
-            <div className="field" style={{ flex: 1 }}>
-              <label htmlFor="name">Season Name *</label>
-              <input id="name" name="name" type="text" required placeholder="e.g. Spring 2026" />
+      {isAdmin && (
+        <details className="card mt-4">
+          <summary style={{ cursor: 'pointer', fontWeight: 600, fontSize: 15 }}>+ New Season</summary>
+          <form action={createSeason} style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div className="form-row">
+              <div className="field" style={{ flex: 1 }}>
+                <label htmlFor="name">Season Name *</label>
+                <input id="name" name="name" type="text" required placeholder="e.g. Spring 2026" />
+              </div>
+              <div className="field">
+                <label htmlFor="startDate">Start Date *</label>
+                <input id="startDate" name="startDate" type="date" required />
+              </div>
+              <div className="field">
+                <label htmlFor="endDate">End Date *</label>
+                <input id="endDate" name="endDate" type="date" required />
+              </div>
             </div>
-            <div className="field">
-              <label htmlFor="startDate">Start Date *</label>
-              <input id="startDate" name="startDate" type="date" required />
+            <div>
+              <button type="submit" className="btn btn-primary">Create Season</button>
             </div>
-            <div className="field">
-              <label htmlFor="endDate">End Date *</label>
-              <input id="endDate" name="endDate" type="date" required />
-            </div>
-          </div>
-          <div>
-            <button type="submit" className="btn btn-primary">Create Season</button>
-          </div>
-        </form>
-      </details>
+          </form>
+        </details>
+      )}
     </>
   )
 }

@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { eq, asc, inArray } from 'drizzle-orm'
-import { requireAdmin } from '@/lib/session'
+import { requireSession } from '@/lib/session'
 import { db } from '@/db'
 import { seasons, games, opponents, gamePlayers, players } from '@/db/schema'
 import { createGameWithRoster } from '@/lib/games'
@@ -21,7 +21,7 @@ function fmtTime(t: string) {
 }
 
 export default async function SeasonPage({ params }: { params: { id: string } }) {
-  await requireAdmin()
+  await requireSession()
 
   const season = await db.select().from(seasons).where(eq(seasons.id, params.id)).get()
   if (!season) notFound()

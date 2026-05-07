@@ -32,16 +32,18 @@ describe('DELETE /api/seasons/[id]/roster/[playerId]', () => {
     mockDb.select.mockReturnValue(mockDb)
   })
 
-  it('returns 403 when not authenticated', async () => {
+  it('returns 401 when not authenticated', async () => {
     mockGetServerSession.mockResolvedValue(null)
     const res = await DELETE(new Request('http://localhost'), { params })
-    expect(res.status).toBe(403)
+    expect(res.status).toBe(401)
   })
 
-  it('returns 403 for manager role', async () => {
+  it('allows manager to remove from roster', async () => {
     mockGetServerSession.mockResolvedValue(managerSession)
+    mockDb.run.mockReturnValue(undefined)
+    mockDb.all.mockReturnValue([])
     const res = await DELETE(new Request('http://localhost'), { params })
-    expect(res.status).toBe(403)
+    expect(res.status).toBe(200)
   })
 
   it('deletes the roster entry', async () => {

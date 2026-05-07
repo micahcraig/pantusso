@@ -68,16 +68,18 @@ describe('POST /api/seasons/[id]/roster', () => {
     mockDb.select.mockReturnValue(mockDb)
   })
 
-  it('returns 403 when not authenticated', async () => {
+  it('returns 401 when not authenticated', async () => {
     mockGetServerSession.mockResolvedValue(null)
     const res = await POST(makePost('s1', { playerId: 'p1' }), { params: { id: 's1' } })
-    expect(res.status).toBe(403)
+    expect(res.status).toBe(401)
   })
 
-  it('returns 403 for manager role', async () => {
+  it('allows manager to add to roster', async () => {
     mockGetServerSession.mockResolvedValue(managerSession)
+    mockDb.run.mockReturnValue(undefined)
+    mockDb.all.mockReturnValue([])
     const res = await POST(makePost('s1', { playerId: 'p1' }), { params: { id: 's1' } })
-    expect(res.status).toBe(403)
+    expect(res.status).toBe(201)
   })
 
   it('returns 400 when playerId is missing', async () => {

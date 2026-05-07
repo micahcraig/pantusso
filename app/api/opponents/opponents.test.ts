@@ -63,16 +63,17 @@ describe('POST /api/opponents', () => {
     })
   }
 
-  it('returns 403 when not authenticated', async () => {
+  it('returns 401 when not authenticated', async () => {
     mockGetServerSession.mockResolvedValue(null)
     const res = await POST(makeRequest({ name: 'Test' }))
-    expect(res.status).toBe(403)
+    expect(res.status).toBe(401)
   })
 
-  it('returns 403 for manager role', async () => {
+  it('allows manager to create opponent', async () => {
     mockGetServerSession.mockResolvedValue(managerSession)
-    const res = await POST(makeRequest({ name: 'Test' }))
-    expect(res.status).toBe(403)
+    mockDb.run.mockReturnValue(undefined)
+    const res = await POST(makeRequest({ name: 'Test Team' }))
+    expect(res.status).toBe(201)
   })
 
   it('returns 400 when name is missing', async () => {
