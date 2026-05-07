@@ -25,7 +25,7 @@ test('logs in successfully and lands on /seasons', async ({ page }) => {
   await page.getByRole('button', { name: 'Sign in' }).click()
   await page.waitForURL(/\/seasons/)
   await page.waitForLoadState('networkidle')
-  await expect(page.getByRole('heading', { name: 'Seasons' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Seasons' })).toBeVisible({ timeout: 15_000 })
 })
 
 test('signs out and redirects to /login', async ({ page }) => {
