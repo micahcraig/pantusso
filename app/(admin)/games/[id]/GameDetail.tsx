@@ -14,11 +14,13 @@ export default function GameDetail({
   gameStatus,
   allPlayers,
   savedLineup,
+  mailtoSubject,
 }: {
-  gameId:      string
-  gameStatus:  string
-  allPlayers:  AttendanceRow[]
-  savedLineup: LineupEntry[]
+  gameId:         string
+  gameStatus:     string
+  allPlayers:     AttendanceRow[]
+  savedLineup:    LineupEntry[]
+  mailtoSubject?: string
 }) {
   const [tab,        setTab]        = useState<Tab>('attendance')
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved')
@@ -120,6 +122,7 @@ export default function GameDetail({
           attendance={attendance}
           onSet={handleSet}
           gameStatus={gameStatus}
+          mailtoSubject={mailtoSubject}
         />
       </div>
       <div className="full-bleed" style={{ display: tab === 'lineup' ? 'block' : 'none' }}>

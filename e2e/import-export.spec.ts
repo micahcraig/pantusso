@@ -25,11 +25,12 @@ test('export downloads a valid JSON file', async ({ page }) => {
   const contents = fs.readFileSync(downloadPath, 'utf-8')
   const json = JSON.parse(contents)
 
-  expect(json.version).toBe(1)
+  expect(json.version).toBe(2)
   expect(json.season.name).toBe('Spring 2026')
   expect(Array.isArray(json.players)).toBe(true)
   expect(json.players.length).toBeGreaterThan(0)
   expect(Array.isArray(json.games)).toBe(true)
+  expect(Array.isArray(json.activityLogs)).toBe(true)
 })
 
 test('import button is visible on seasons list', async ({ page }) => {

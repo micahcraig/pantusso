@@ -6,12 +6,11 @@ export async function GET(_req: Request, { params }: { params: { token: string }
   const player = await lookupPlayerByToken(params.token)
   if (!player) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const { seasonName, games } = await getUpcomingGames(player.id)
+  const { seasons } = await getUpcomingGames(player.id)
 
   return NextResponse.json({
-    player:     { id: player.id, name: player.name },
-    seasonName,
-    games,
+    player: { id: player.id, name: player.name },
+    seasons,
   })
 }
 

@@ -101,7 +101,18 @@ db/
 | `game_players` | `id`, `game_id`, `player_id`, `attendance` (confirmed\|out\|unknown), `availability_set_at`, `availability_updated_at` |
 | `lineup_entries` | `id`, `game_id`, `player_id`, `batting_order`, `position`, `lineup_status` (active\|bench\|did_not_bat) |
 
-Schema changes: edit `db/schema.ts`, then `npm run db:generate`, then `npm run db:migrate`.
+Schema changes require **both** a SQLite and a MySQL migration:
+
+1. Edit `db/schema.ts`
+2. `npm run db:generate` — creates the SQLite migration in `db/migrations/`
+3. `npm run db:migrate` — applies it to the local SQLite dev DB
+4. Manually create the matching MySQL migration in `db/migrations-mysql/` — same filename as the generated SQLite file, but with MySQL syntax:
+   - IDs: `varchar(36)` instead of `text`
+   - Booleans: `tinyint(1)` instead of `integer`
+   - Timestamps: `int DEFAULT (UNIX_TIMESTAMP())` instead of `integer DEFAULT (unixepoch())`
+   - String columns: `varchar(N)` instead of `text` where a length is natural
+   - Table recreation (SQLite workaround for ALTER TABLE): use `ALTER TABLE ... MODIFY COLUMN` / `ADD COLUMN` directly
+5. Add the new entry to `db/migrations-mysql/meta/_journal.json` (copy `idx`, `when`, `tag`, and `breakpoints` from the SQLite journal entry)
 
 ---
 
@@ -146,6 +157,17 @@ Use `useState` + `fetch` (not Server Actions). See `AttendancePanel.tsx` and `co
 
 ### ebbets lineup editor
 The `LineupManager` component requires `dynamic(..., { ssr: false })` because of dnd-kit browser APIs. The wrapper in `components/lineup-editor-wrapper/` owns all translation between DB `LineupEntry[]` and ebbets `EbbetsPlayer[]`. The PUT endpoint at `/api/games/[id]/lineup` atomically replaces all entries (delete + insert).
+
+---
+
+## E2E seed data
+
+There are **two independent seeds** that must stay in sync:
+
+- `db/seed.ts` — SQLite seed used by `test:e2e:sqlite` (via `e2e/global-setup.ts`)
+- `scripts/seed-e2e.js` — MySQL seed used by `test:e2e:mysql` (via `scripts/test-e2e-mysql.sh`)
+
+They have the **same opponents** (Diamond Devils, Hillside Hawks, Riverside Renegades, County Crushers, Metro Mudhens) and the **same game structure** (2 completed, 4 scheduled, 1 cancelled in that opponent order), but **different players and game dates**. E2E tests must be written to work against both seeds — reference opponents by name, not by player name or date text. When adding new seed data to one file, mirror the change in the other.
 
 ---
 

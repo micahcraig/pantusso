@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { and, eq, asc } from 'drizzle-orm'
+import { and, eq, asc, inArray } from 'drizzle-orm'
 import { authOptions } from '@/lib/auth'
 import { db } from '@/db'
-import { gamePlayers, players } from '@/db/schema'
+import { gamePlayers, players, games, opponents } from '@/db/schema'
 import type { AttendanceStatus } from '@/db/schema'
+import { logActivity } from '@/lib/activity'
 
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions)
@@ -43,9 +44,22 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 
   const now = new Date()
 
+  const [gameInfo, playerRows] = await Promise.all([
+    db.select({ seasonId: games.seasonId, date: games.date, opponentName: opponents.name })
+      .from(games)
+      .innerJoin(opponents, eq(games.opponentId, opponents.id))
+      .where(eq(games.id, params.id))
+      .get(),
+    db.select({ id: players.id, name: players.name })
+      .from(players)
+      .where(inArray(players.id, updates.map(u => u.playerId)))
+      .all(),
+  ])
+  const playerNameMap = new Map(playerRows.map(p => [p.id, p.name]))
+
   for (const { playerId, attendance, note } of updates) {
     const existing = await db
-      .select({ availabilitySetAt: gamePlayers.availabilitySetAt })
+      .select({ attendance: gamePlayers.attendance, availabilitySetAt: gamePlayers.availabilitySetAt })
       .from(gamePlayers)
       .where(and(eq(gamePlayers.gameId, params.id), eq(gamePlayers.playerId, playerId)))
       .get()
@@ -59,6 +73,22 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       })
       .where(and(eq(gamePlayers.gameId, params.id), eq(gamePlayers.playerId, playerId)))
       .run()
+
+    if (attendance !== undefined && gameInfo && attendance !== existing?.attendance) {
+      await logActivity({
+        seasonId:  gameInfo.seasonId,
+        gameId:    params.id,
+        playerId,
+        eventType: 'attendance_updated',
+        payload: {
+          playerName:   playerNameMap.get(playerId) ?? '',
+          gameDate:     gameInfo.date,
+          opponentName: gameInfo.opponentName,
+          status:       attendance,
+          prevStatus:   existing?.attendance ?? null,
+        },
+      })
+    }
   }
 
   return NextResponse.json({ ok: true })

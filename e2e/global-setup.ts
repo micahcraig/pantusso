@@ -9,6 +9,7 @@ const TEST_DB_URL  = 'sqlite:./test.db'
 
 // Tables in reverse dependency order so FK constraints don't block DELETE
 const TABLES = [
+  'activity_log',
   'lineup_entries',
   'game_players',
   'season_roster',

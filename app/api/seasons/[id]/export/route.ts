@@ -3,7 +3,7 @@ import { eq, asc, inArray } from 'drizzle-orm'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { db } from '@/db'
-import { seasons, seasonRoster, players, games, opponents, gamePlayers, lineupEntries } from '@/db/schema'
+import { seasons, seasonRoster, players, games, opponents, gamePlayers, lineupEntries, activityLog } from '@/db/schema'
 
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions)
@@ -99,8 +99,15 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     lineupByGame.set(row.gameId, existing)
   }
 
+  const activityLogRows = await db
+    .select()
+    .from(activityLog)
+    .where(eq(activityLog.seasonId, params.id))
+    .orderBy(asc(activityLog.createdAt))
+    .all()
+
   const exportData = {
-    version: 1,
+    version: 2,
     season: {
       name:      season.name,
       startDate: season.startDate,
@@ -134,6 +141,15 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
         position:     l.position,
         lineupStatus: l.lineupStatus,
       })),
+    })),
+    activityLogs: activityLogRows.map(e => ({
+      eventType:    e.eventType,
+      payload:      e.payload,
+      createdAt:    (e.createdAt ?? new Date()).toISOString(),
+      // top-level fields for import remapping (also present in payload)
+      gameDate:     (e.payload as Record<string, unknown>).gameDate    as string | undefined,
+      opponentName: (e.payload as Record<string, unknown>).opponentName as string | undefined,
+      playerName:   (e.payload as Record<string, unknown>).playerName  as string | undefined,
     })),
   }
 

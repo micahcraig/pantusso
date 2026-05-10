@@ -39,35 +39,36 @@ describe('lookupPlayerByToken', () => {
 describe('getUpcomingGames', () => {
   beforeEach(() => { vi.clearAllMocks() })
 
-  it('returns empty when the player has no roster entry', async () => {
-    mockDb.get.mockReturnValue(undefined)
+  it('returns empty seasons when the player has no roster entries', async () => {
+    mockDb.all.mockReturnValueOnce([]) // no rostered seasons
     const result = await getUpcomingGames('p1')
-    expect(result).toEqual({ seasonName: null, games: [] })
+    expect(result).toEqual({ seasons: [] })
   })
 
-  it('returns season name and upcoming games when rostered', async () => {
-    const rosterEntry = { seasonId: 's1', seasonName: 'Spring 2026' }
+  it('returns seasons with upcoming games when rostered', async () => {
     const gameRows = [
-      { gameId: 'g1', date: '2026-06-01', time: '18:30', location: 'Field 1',
+      { seasonId: 's1', seasonName: 'Spring 2026', seasonStart: '2026-04-01',
+        gameId: 'g1', date: '2026-06-01', time: '18:30', location: 'Field 1',
         homeOrAway: 'home', opponentName: 'Rivals', attendance: 'unknown', note: null },
     ]
-    mockDb.get.mockReturnValue(rosterEntry)
-    mockDb.all.mockReturnValue(gameRows)
+    mockDb.all.mockReturnValueOnce([{ seasonId: 's1' }]) // rostered seasons
+    mockDb.all.mockReturnValueOnce(gameRows)              // game rows
 
     const result = await getUpcomingGames('p1')
 
-    expect(result.seasonName).toBe('Spring 2026')
-    expect(result.games).toEqual(gameRows)
+    expect(result.seasons).toHaveLength(1)
+    expect(result.seasons[0].seasonName).toBe('Spring 2026')
+    expect(result.seasons[0].games).toHaveLength(1)
+    expect(result.seasons[0].games[0].gameId).toBe('g1')
   })
 
-  it('returns an empty games array when there are no upcoming scheduled games', async () => {
-    mockDb.get.mockReturnValue({ seasonId: 's1', seasonName: 'Spring 2026' })
-    mockDb.all.mockReturnValue([])
+  it('returns empty seasons array when no upcoming scheduled games', async () => {
+    mockDb.all.mockReturnValueOnce([{ seasonId: 's1' }]) // rostered seasons
+    mockDb.all.mockReturnValueOnce([])                   // no upcoming games
 
     const result = await getUpcomingGames('p1')
 
-    expect(result.seasonName).toBe('Spring 2026')
-    expect(result.games).toHaveLength(0)
+    expect(result.seasons).toHaveLength(0)
   })
 })
 
@@ -77,7 +78,9 @@ describe('setAttendance', () => {
   beforeEach(() => { vi.clearAllMocks() })
 
   it('updates an existing game_player record', async () => {
-    mockDb.get.mockReturnValue({ id: 'gp1', availabilitySetAt: new Date('2026-05-01') })
+    // Use mockReturnValueOnce so subsequent get() calls (gameInfo, playerInfo) return
+    // undefined, preventing logActivity from firing and keeping insert call count at 0.
+    mockDb.get.mockReturnValueOnce({ id: 'gp1', availabilitySetAt: new Date('2026-05-01') })
     await setAttendance('g1', 'p1', 'confirmed')
     expect(mockDb.update).toHaveBeenCalled()
     expect(mockDb.insert).not.toHaveBeenCalled()

@@ -4,7 +4,8 @@ import { randomUUID } from 'crypto'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { db } from '@/db'
-import { seasons, seasonRoster, players, games, opponents, gamePlayers, lineupEntries } from '@/db/schema'
+import { seasons, seasonRoster, players, games, opponents, gamePlayers, lineupEntries, activityLog } from '@/db/schema'
+import type { ActivityEventType } from '@/db/schema'
 
 type ImportGame = {
   opponentName: string
@@ -19,6 +20,15 @@ type ImportGame = {
   lineup: Array<{ playerName: string; battingOrder: number | null; position: string | null; lineupStatus: string }>
 }
 
+type ImportActivityLog = {
+  eventType:    string
+  payload:      Record<string, unknown>
+  createdAt:    string
+  gameDate?:    string
+  opponentName?: string
+  playerName?:  string
+}
+
 type ImportBody = {
   version: number
   season: { name: string; startDate: string; endDate: string }
@@ -31,6 +41,7 @@ type ImportBody = {
     notes: string | null
   }>
   games: ImportGame[]
+  activityLogs?: ImportActivityLog[]
 }
 
 export async function POST(req: Request) {
@@ -47,7 +58,7 @@ export async function POST(req: Request) {
   }
 
   // 1. Validate
-  if (body.version !== 1 || !body.season || !body.players || !body.games) {
+  if (![1, 2].includes(body.version) || !body.season || !body.players || !body.games) {
     return NextResponse.json({ error: 'Invalid export format' }, { status: 400 })
   }
 
@@ -128,11 +139,15 @@ export async function POST(req: Request) {
   }
 
   // 6. For each game: insert game, attendance, lineup
+  const gameMap = new Map<string, string>() // `${date}:${opponentName}` → newGameId
+
   for (const game of body.games) {
     const opponentId = opponentMap.get(game.opponentName)
     if (!opponentId) continue
 
     const newGameId = randomUUID()
+    gameMap.set(`${game.date}:${game.opponentName}`, newGameId)
+
     await db.insert(games).values({
       id:            newGameId,
       seasonId:      newSeasonId,
@@ -178,6 +193,25 @@ export async function POST(req: Request) {
     }
   }
 
-  // 7. Return new season id
+  // 7. Import activity logs (version 2 only)
+  if (body.version === 2 && body.activityLogs) {
+    for (const entry of body.activityLogs) {
+      const gameId   = entry.gameDate && entry.opponentName
+        ? gameMap.get(`${entry.gameDate}:${entry.opponentName}`)
+        : undefined
+      const playerId = entry.playerName ? playerMap.get(entry.playerName) : undefined
+
+      await db.insert(activityLog).values({
+        seasonId:  newSeasonId,
+        gameId,
+        playerId,
+        eventType: entry.eventType as ActivityEventType,
+        payload:   entry.payload,
+        createdAt: new Date(entry.createdAt),
+      }).run()
+    }
+  }
+
+  // 8. Return new season id
   return NextResponse.json({ seasonId: newSeasonId }, { status: 201 })
 }

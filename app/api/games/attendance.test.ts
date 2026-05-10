@@ -6,17 +6,17 @@ vi.mock('@/lib/auth', () => ({ authOptions: {} }))
 
 const mockDb = vi.hoisted(() => {
   const chain: Record<string, ReturnType<typeof vi.fn>> = {}
-  for (const m of ['select','from','where','innerJoin','orderBy','update','set','get','all','run']) {
+  for (const m of ['select','from','where','innerJoin','orderBy','update','set','insert','values','get','all','run']) {
     chain[m] = vi.fn()
   }
-  for (const m of ['select','from','where','innerJoin','orderBy','update','set']) {
+  for (const m of ['select','from','where','innerJoin','orderBy','update','set','insert','values']) {
     chain[m].mockReturnValue(chain)
   }
   return chain
 })
 vi.mock('@/db', () => ({ db: mockDb }))
-vi.mock('drizzle-orm', () => ({ and: vi.fn(), eq: vi.fn(), asc: vi.fn() }))
-vi.mock('@/db/schema', () => ({ gamePlayers: {}, players: {} }))
+vi.mock('drizzle-orm', () => ({ and: vi.fn(), eq: vi.fn(), asc: vi.fn(), inArray: vi.fn() }))
+vi.mock('@/db/schema', () => ({ gamePlayers: {}, players: {}, games: {}, opponents: {}, activityLog: {} }))
 
 import { GET, PATCH } from '@/app/api/games/[id]/attendance/route'
 
@@ -62,6 +62,9 @@ describe('PATCH /api/games/[id]/attendance', () => {
     mockDb.select.mockReturnValue(mockDb)
     mockDb.update.mockReturnValue(mockDb)
     mockDb.set.mockReturnValue(mockDb)
+    mockDb.insert.mockReturnValue(mockDb)
+    mockDb.values.mockReturnValue(mockDb)
+    mockDb.all.mockReturnValue([])  // default empty playerRows for logActivity name lookup
   })
 
   it('returns 401 when not authenticated', async () => {

@@ -123,6 +123,28 @@ export const lineupEntries = sqliteTable('lineup_entries', {
   playerIdIdx: index('lineup_entry_player_id_idx').on(t.playerId),
 }))
 
+// ── Activity Log ──────────────────────────────────────────────────────────────
+
+export type ActivityEventType =
+  | 'availability_updated'
+  | 'attendance_updated'
+  | 'score_recorded'
+  | 'game_cancelled'
+  | 'game_rescheduled'
+  | 'game_added'
+
+export const activityLog = sqliteTable('activity_log', {
+  id:        text('id').primaryKey().$defaultFn(() => randomUUID()),
+  seasonId:  text('season_id').notNull().references(() => seasons.id),
+  gameId:    text('game_id').references(() => games.id),
+  playerId:  text('player_id').references(() => players.id),
+  eventType: text('event_type').$type<ActivityEventType>().notNull(),
+  payload:   text('payload', { mode: 'json' }).$type<Record<string, unknown>>().notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+}, (t) => ({
+  seasonCreatedIdx: index('activity_log_season_created_idx').on(t.seasonId, t.createdAt),
+}))
+
 // ── Relations ─────────────────────────────────────────────────────────────────
 
 export const playersRelations = relations(players, ({ many }) => ({
@@ -176,5 +198,7 @@ export type Game         = typeof games.$inferSelect
 export type NewGame      = typeof games.$inferInsert
 export type GamePlayer   = typeof gamePlayers.$inferSelect
 export type NewGamePlayer = typeof gamePlayers.$inferInsert
-export type LineupEntry  = typeof lineupEntries.$inferSelect
+export type LineupEntry    = typeof lineupEntries.$inferSelect
 export type NewLineupEntry = typeof lineupEntries.$inferInsert
+export type ActivityLogEntry    = typeof activityLog.$inferSelect
+export type NewActivityLogEntry = typeof activityLog.$inferInsert

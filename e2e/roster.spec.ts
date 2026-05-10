@@ -20,7 +20,7 @@ test('shows jersey numbers', async ({ page }) => {
 
 test('navigates to player detail when a row is clicked', async ({ page }) => {
   await page.goto('/roster')
-  await page.getByText('Marcus Johnson').click()
+  await page.getByRole('link', { name: /Marcus Johnson/ }).first().click()
   await expect(page).toHaveURL(/\/roster\//)
   await expect(page.getByText('Marcus Johnson')).toBeVisible()
 })
@@ -35,4 +35,22 @@ test('shows position badges on roster rows', async ({ page }) => {
 test('shows the + Add Player form at the bottom', async ({ page }) => {
   await page.goto('/roster')
   await expect(page.getByText('+ Add Player')).toBeVisible()
+})
+
+test('clipboard icon copies availability URL when clicked', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+
+  // Get the token from the player detail page so we know what to expect
+  await page.goto('/roster')
+  await page.getByRole('link', { name: /Marcus Johnson/ }).first().click()
+  const code  = await page.locator('code').textContent()
+  const token = code!.split('/availability/')[1].trim()
+
+  // Go back to roster and click the clipboard icon next to Marcus Johnson
+  await page.goto('/roster')
+  const marcusRow = page.locator('.list-row', { has: page.getByText('Marcus Johnson') })
+  await marcusRow.getByTitle('Copy availability link').click()
+
+  const clipText = await page.evaluate(() => navigator.clipboard.readText())
+  expect(clipText).toContain(`/availability/${token}`)
 })

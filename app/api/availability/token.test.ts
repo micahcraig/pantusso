@@ -32,21 +32,22 @@ describe('GET /api/availability/[token]', () => {
     expect(res.status).toBe(404)
   })
 
-  it('returns player, seasonName, and games when token is valid', async () => {
+  it('returns player and seasons when token is valid', async () => {
     mockLookupPlayerByToken.mockResolvedValue(player)
-    mockGetUpcomingGames.mockResolvedValue({ seasonName: 'Spring 2026', games: [{ id: 'g1' }] })
+    mockGetUpcomingGames.mockResolvedValue({ seasons: [{ seasonName: 'Spring 2026', games: [{ id: 'g1' }] }] })
 
     const res = await GET(makeGet('tok-abc'), { params: { token: 'tok-abc' } })
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(body.player).toEqual({ id: 'p1', name: 'Alice' })
-    expect(body.seasonName).toBe('Spring 2026')
-    expect(body.games).toHaveLength(1)
+    expect(body.seasons).toHaveLength(1)
+    expect(body.seasons[0].seasonName).toBe('Spring 2026')
+    expect(body.seasons[0].games).toHaveLength(1)
   })
 
   it('calls getUpcomingGames with the player id', async () => {
     mockLookupPlayerByToken.mockResolvedValue(player)
-    mockGetUpcomingGames.mockResolvedValue({ seasonName: null, games: [] })
+    mockGetUpcomingGames.mockResolvedValue({ seasons: [] })
     await GET(makeGet('tok-abc'), { params: { token: 'tok-abc' } })
     expect(mockGetUpcomingGames).toHaveBeenCalledWith('p1')
   })

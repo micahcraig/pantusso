@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
+import PlayerName from '@/components/PlayerName'
 import type { AttendanceStatus, Position } from '@/db/schema'
 
 export type AttendanceRow = {
@@ -10,6 +11,10 @@ export type AttendanceRow = {
   preferredPositions: Position[]
   attendance:         AttendanceStatus
   note:               string | null
+  email:              string | null
+  whatsapp:           string | null
+  mailtoBody:         string | null
+  whatsappBody:       string | null
 }
 
 export default function AttendancePanel({
@@ -18,12 +23,14 @@ export default function AttendancePanel({
   attendance,
   onSet,
   gameStatus,
+  mailtoSubject,
 }: {
-  gameId:         string
-  initialPlayers: AttendanceRow[]
-  attendance:     Record<string, AttendanceStatus>
-  onSet:          (playerId: string, status: AttendanceStatus) => void
-  gameStatus:     string
+  gameId:          string
+  initialPlayers:  AttendanceRow[]
+  attendance:      Record<string, AttendanceStatus>
+  onSet:           (playerId: string, status: AttendanceStatus) => void
+  gameStatus:      string
+  mailtoSubject?:  string
 }) {
   const isCancelled = gameStatus === 'cancelled'
 
@@ -86,6 +93,7 @@ export default function AttendancePanel({
                 onSet={status => setStatus(p.playerId, status)}
                 disabled={isCancelled}
                 gameId={gameId}
+                mailtoSubject={mailtoSubject}
               />
             ))}
           </div>
@@ -107,6 +115,7 @@ export default function AttendancePanel({
                 onSet={status => setStatus(p.playerId, status)}
                 disabled={isCancelled}
                 gameId={gameId}
+                mailtoSubject={mailtoSubject}
               />
             ))}
           </div>
@@ -128,6 +137,7 @@ export default function AttendancePanel({
                 onSet={status => setStatus(p.playerId, status)}
                 disabled={isCancelled}
                 gameId={gameId}
+                mailtoSubject={mailtoSubject}
               />
             ))}
           </div>
@@ -149,6 +159,7 @@ export default function AttendancePanel({
                 onSet={status => setStatus(p.playerId, status)}
                 disabled={isCancelled}
                 gameId={gameId}
+                mailtoSubject={mailtoSubject}
               />
             ))}
           </div>
@@ -170,12 +181,14 @@ function PlayerRow({
   onSet,
   disabled,
   gameId,
+  mailtoSubject,
 }: {
-  player:   AttendanceRow
-  current:  AttendanceStatus
-  onSet:    (s: AttendanceStatus) => void
-  disabled: boolean
-  gameId:   string
+  player:         AttendanceRow
+  current:        AttendanceStatus
+  onSet:          (s: AttendanceStatus) => void
+  disabled:       boolean
+  gameId:         string
+  mailtoSubject?: string
 }) {
   const btnStyle = (active: boolean, activeColor: string): React.CSSProperties => ({
     padding:      '4px 10px',
@@ -200,7 +213,9 @@ function PlayerRow({
         <span style={{ width: 32, color: '#9ca3af', fontWeight: 600, fontSize: 13, flexShrink: 0 }}>
           {player.jerseyNumber ? `#${player.jerseyNumber}` : ''}
         </span>
-        <span style={{ flex: 1, fontWeight: 500, fontSize: 14 }}>{player.name}</span>
+        <span style={{ flex: 1 }}>
+          <PlayerName name={player.name} email={player.email} mailtoSubject={mailtoSubject} mailtoBody={player.mailtoBody ?? undefined} whatsapp={player.whatsapp} whatsappSubject={mailtoSubject} whatsappBody={player.whatsappBody ?? undefined} clipboardText={player.whatsappBody ?? undefined} />
+        </span>
         <div style={{ display: 'flex', gap: 6 }}>
           <button style={btnStyle(current === 'confirmed', '#16a34a')} onClick={() => onSet('confirmed')} disabled={disabled}>
             In

@@ -6,17 +6,17 @@ vi.mock('@/lib/auth', () => ({ authOptions: {} }))
 
 const mockDb = vi.hoisted(() => {
   const chain: Record<string, ReturnType<typeof vi.fn>> = {}
-  for (const m of ['select','from','where','update','set','get','run']) {
+  for (const m of ['select','from','where','update','set','insert','values','get','run']) {
     chain[m] = vi.fn()
   }
-  for (const m of ['select','from','where','update','set']) {
+  for (const m of ['select','from','where','update','set','insert','values']) {
     chain[m].mockReturnValue(chain)
   }
   return chain
 })
 vi.mock('@/db', () => ({ db: mockDb }))
 vi.mock('drizzle-orm', () => ({ eq: vi.fn() }))
-vi.mock('@/db/schema', () => ({ games: { $inferInsert: {} } }))
+vi.mock('@/db/schema', () => ({ games: { $inferInsert: {} }, opponents: {}, activityLog: {} }))
 
 import { PATCH } from '@/app/api/games/[id]/route'
 

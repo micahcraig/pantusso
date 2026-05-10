@@ -1,8 +1,9 @@
 import { eq } from 'drizzle-orm'
 import { randomUUID } from 'crypto'
 import { db } from '@/db'
-import { games, gamePlayers, seasonRoster } from '@/db/schema'
+import { games, gamePlayers, seasonRoster, opponents } from '@/db/schema'
 import type { NewGame } from '@/db/schema'
+import { logActivity } from '@/lib/activity'
 
 /** Creates a game and auto-inserts GamePlayer rows for every rostered player. */
 export async function createGameWithRoster(data: Omit<NewGame, 'id' | 'createdAt' | 'updatedAt'>) {
@@ -29,6 +30,22 @@ export async function createGameWithRoster(data: Omit<NewGame, 'id' | 'createdAt
       attendance: 'unknown',
     }).run()
   }
+
+  const opponent = await db.select({ name: opponents.name })
+    .from(opponents).where(eq(opponents.id, data.opponentId)).get()
+
+  await logActivity({
+    seasonId: data.seasonId,
+    gameId:   id,
+    eventType: 'game_added',
+    payload: {
+      opponentName: opponent?.name ?? '',
+      date:         data.date,
+      time:         data.time,
+      location:     data.location,
+      homeOrAway:   data.homeOrAway,
+    },
+  })
 
   return { id, ...data, createdAt: now, updatedAt: now }
 }

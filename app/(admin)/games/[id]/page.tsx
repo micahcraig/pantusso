@@ -1,9 +1,11 @@
 import Link from 'next/link'
+import { headers } from 'next/headers'
 import { notFound } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { randomUUID } from 'crypto'
 import { eq } from 'drizzle-orm'
 import { requireSession } from '@/lib/session'
+import { logActivity } from '@/lib/activity'
 import { db } from '@/db'
 import { games, opponents, seasons, gamePlayers, players, lineupEntries, seasonRoster } from '@/db/schema'
 import GameDetail from './GameDetail'
@@ -49,20 +51,35 @@ export default async function GamePage({ params }: { params: { id: string } }) {
   if (!game) notFound()
   const gameRow = game
 
-  const attendanceRows: AttendanceRow[] = await db
+  const headersList = headers()
+  const host    = headersList.get('host') ?? 'localhost:3000'
+  const proto   = process.env.NODE_ENV === 'production' ? 'https' : 'http'
+  const baseUrl = `${proto}://${host}`
+
+  const attendanceRows: AttendanceRow[] = (await db
     .select({
-      playerId:           players.id,
-      name:               players.name,
-      jerseyNumber:       players.jerseyNumber,
+      playerId:          players.id,
+      name:              players.name,
+      jerseyNumber:      players.jerseyNumber,
       preferredPositions: players.preferredPositions,
-      attendance:         gamePlayers.attendance,
-      note:               gamePlayers.note,
+      attendance:        gamePlayers.attendance,
+      note:              gamePlayers.note,
+      email:             players.email,
+      whatsapp:          players.whatsapp,
+      availabilityToken: players.availabilityToken,
     })
     .from(gamePlayers)
     .innerJoin(players, eq(gamePlayers.playerId, players.id))
     .where(eq(gamePlayers.gameId, params.id))
     .orderBy(players.name)
-    .all()
+    .all())
+    .map(r => {
+      const rsvp = (status: string) =>
+        `${baseUrl}/availability/${r.availabilityToken}/rsvp?game=${params.id}&status=${status}`
+      const mailtoBody   = `In: ${rsvp('confirmed')}\nOut: ${rsvp('out')}\nMaybe: ${rsvp('maybe')}`
+      const whatsappBody = `${baseUrl}/availability/${r.availabilityToken}`
+      return { ...r, mailtoBody, whatsappBody }
+    })
 
   const savedLineup: LineupEntry[] = (await db
     .select({
@@ -88,6 +105,12 @@ export default async function GamePage({ params }: { params: { id: string } }) {
     if (isNaN(ourScore) || isNaN(opponentScore)) return
     await db.update(games).set({ ourScore, opponentScore, status: 'completed', updatedAt: new Date() })
       .where(eq(games.id, params.id)).run()
+    await logActivity({
+      seasonId:  gameRow.seasonId,
+      gameId:    params.id,
+      eventType: 'score_recorded',
+      payload:   { opponentName: gameRow.opponentName, gameDate: gameRow.date, ourScore, opponentScore },
+    })
     revalidatePath(`/games/${params.id}`)
     revalidatePath(`/seasons/${gameRow.seasonId}`)
   }
@@ -104,6 +127,12 @@ export default async function GamePage({ params }: { params: { id: string } }) {
     'use server'
     await db.update(games).set({ status: 'cancelled', updatedAt: new Date() })
       .where(eq(games.id, params.id)).run()
+    await logActivity({
+      seasonId:  gameRow.seasonId,
+      gameId:    params.id,
+      eventType: 'game_cancelled',
+      payload:   { opponentName: gameRow.opponentName, gameDate: gameRow.date },
+    })
     revalidatePath(`/games/${params.id}`)
     revalidatePath(`/seasons/${gameRow.seasonId}`)
   }
@@ -207,6 +236,7 @@ export default async function GamePage({ params }: { params: { id: string } }) {
         gameStatus={game.status}
         allPlayers={attendanceRows}
         savedLineup={savedLineup}
+        mailtoSubject={`${game.seasonName} vs ${game.opponentName} ${new Date(game.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: '2-digit' })} ${fmtTime(game.time)} @ ${game.location}`}
       />
 
       {/* Record / edit result */}

@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { headers } from 'next/headers'
 import { notFound } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { randomUUID } from 'crypto'
@@ -6,6 +7,7 @@ import { and, eq, inArray, ne } from 'drizzle-orm'
 import { requireSession } from '@/lib/session'
 import { db } from '@/db'
 import { seasons, seasonRoster, players, games, gamePlayers } from '@/db/schema'
+import PlayerName from '@/components/PlayerName'
 
 export default async function SeasonRosterPage({ params }: { params: { id: string } }) {
   await requireSession()
@@ -13,33 +15,28 @@ export default async function SeasonRosterPage({ params }: { params: { id: strin
   const season = await db.select().from(seasons).where(eq(seasons.id, params.id)).get()
   if (!season) notFound()
 
+  const headersList = headers()
+  const host    = headersList.get('host') ?? 'localhost:3000'
+  const proto   = process.env.NODE_ENV === 'production' ? 'https' : 'http'
+  const baseUrl = `${proto}://${host}`
+
   const rosterRows = (await db
-    .select({ playerId: players.id, name: players.name, jerseyNumber: players.jerseyNumber, preferredPositions: players.preferredPositions })
+    .select({ playerId: players.id, name: players.name, jerseyNumber: players.jerseyNumber, preferredPositions: players.preferredPositions, email: players.email, whatsapp: players.whatsapp, availabilityToken: players.availabilityToken })
     .from(seasonRoster)
     .innerJoin(players, eq(seasonRoster.playerId, players.id))
     .where(eq(seasonRoster.seasonId, params.id))
     .all())
-    .sort((a, b) => {
-      if (a.jerseyNumber && b.jerseyNumber) return +a.jerseyNumber - +b.jerseyNumber
-      if (a.jerseyNumber) return -1
-      if (b.jerseyNumber) return 1
-      return a.name.localeCompare(b.name)
-    })
+    .sort((a, b) => a.name.localeCompare(b.name))
 
   const rosterIds = new Set(rosterRows.map(r => r.playerId))
 
   const notOnRoster = (await db
-    .select({ id: players.id, name: players.name, jerseyNumber: players.jerseyNumber, preferredPositions: players.preferredPositions })
+    .select({ id: players.id, name: players.name, jerseyNumber: players.jerseyNumber, preferredPositions: players.preferredPositions, email: players.email, whatsapp: players.whatsapp, availabilityToken: players.availabilityToken })
     .from(players)
     .where(eq(players.isActive, true))
     .all())
     .filter(p => !rosterIds.has(p.id))
-    .sort((a, b) => {
-      if (a.jerseyNumber && b.jerseyNumber) return +a.jerseyNumber - +b.jerseyNumber
-      if (a.jerseyNumber) return -1
-      if (b.jerseyNumber) return 1
-      return a.name.localeCompare(b.name)
-    })
+    .sort((a, b) => a.name.localeCompare(b.name))
 
   async function addPlayer(data: FormData) {
     'use server'
@@ -120,7 +117,7 @@ export default async function SeasonRosterPage({ params }: { params: { id: strin
               {rosterRows.map(p => (
                 <tr key={p.playerId}>
                   <td style={{ width: 40, color: '#9ca3af', fontWeight: 600 }}>{p.jerseyNumber ?? ''}</td>
-                  <td style={{ fontWeight: 500 }}>{p.name}</td>
+                  <td><PlayerName name={p.name} email={p.email} mailtoSubject={season.name} mailtoBody={`${baseUrl}/availability/${p.availabilityToken}`} whatsapp={p.whatsapp} whatsappSubject={season.name} clipboardText={`${baseUrl}/availability/${p.availabilityToken}`} /></td>
                   <td style={{ textAlign: 'right' }}>
                     <form action={removePlayer} style={{ display: 'inline' }}>
                       <input type="hidden" name="playerId" value={p.playerId} />
@@ -144,7 +141,7 @@ export default async function SeasonRosterPage({ params }: { params: { id: strin
               {notOnRoster.map(p => (
                 <tr key={p.id}>
                   <td style={{ width: 40, color: '#9ca3af', fontWeight: 600 }}>{p.jerseyNumber ?? ''}</td>
-                  <td style={{ fontWeight: 500 }}>{p.name}</td>
+                  <td><PlayerName name={p.name} email={p.email} mailtoSubject={season.name} mailtoBody={`${baseUrl}/availability/${p.availabilityToken}`} whatsapp={p.whatsapp} whatsappSubject={season.name} clipboardText={`${baseUrl}/availability/${p.availabilityToken}`} /></td>
                   <td style={{ textAlign: 'right' }}>
                     <form action={addPlayer} style={{ display: 'inline' }}>
                       <input type="hidden" name="playerId" value={p.id} />

@@ -29,6 +29,7 @@ vi.mock('@/db/schema', () => ({
   opponents:    {},
   gamePlayers:  {},
   lineupEntries:{},
+  activityLog:  {},
 }))
 
 import { POST } from '@/app/api/seasons/import/route'
@@ -99,9 +100,9 @@ describe('POST /api/seasons/import', () => {
     expect(res.status).toBe(400)
   })
 
-  it('returns 400 when version is not 1', async () => {
+  it('returns 400 when version is unsupported', async () => {
     mockGetServerSession.mockResolvedValue(adminSession)
-    const res = await POST(makeRequest({ ...validBody, version: 2 }))
+    const res = await POST(makeRequest({ ...validBody, version: 3 }))
     expect(res.status).toBe(400)
   })
 

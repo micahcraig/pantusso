@@ -1,16 +1,26 @@
 import Link from 'next/link'
+import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { randomUUID } from 'crypto'
 import { requireSession } from '@/lib/session'
 import { db } from '@/db'
-import { players } from '@/db/schema'
-import { eq } from 'drizzle-orm'
+import { players, seasons } from '@/db/schema'
+import { desc, eq } from 'drizzle-orm'
 import PositionCheckboxes from '@/components/PositionCheckboxes'
+import PlayerName from '@/components/PlayerName'
 import type { Position } from '@/db/schema'
 
 export default async function RosterPage() {
   await requireSession()
+
+  const headersList = headers()
+  const host   = headersList.get('host') ?? 'localhost:3000'
+  const proto  = process.env.NODE_ENV === 'production' ? 'https' : 'http'
+  const baseUrl = `${proto}://${host}`
+
+  const latestSeason = await db.select({ name: seasons.name }).from(seasons).orderBy(desc(seasons.startDate)).get()
+  const seasonName   = latestSeason?.name
 
   const allPlayers = await db.select().from(players).all()
   const byJerseyThenName = (a: { jerseyNumber: string | null; name: string }, b: { jerseyNumber: string | null; name: string }) => {
@@ -70,7 +80,7 @@ export default async function RosterPage() {
               {p.jerseyNumber ? `#${p.jerseyNumber}` : ''}
             </span>
             <span style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ fontWeight: 500, fontSize: 14 }}>{p.name}</span>
+              <PlayerName name={p.name} email={p.email} mailtoSubject={seasonName} mailtoBody={`${baseUrl}/availability/${p.availabilityToken}`} whatsapp={p.whatsapp} whatsappSubject={seasonName} clipboardText={`${baseUrl}/availability/${p.availabilityToken}`} />
               {p.notes && (
                 <span style={{ display: 'block', fontSize: 12, color: '#9ca3af', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {p.notes.slice(0, 60)}{p.notes.length > 60 ? '…' : ''}
@@ -103,7 +113,7 @@ export default async function RosterPage() {
                 <span style={{ width: 32, flexShrink: 0, fontWeight: 600, color: '#9ca3af', fontSize: 13 }}>
                   {p.jerseyNumber ? `#${p.jerseyNumber}` : ''}
                 </span>
-                <span style={{ flex: 1, fontWeight: 500, fontSize: 14 }}>{p.name}</span>
+                <span style={{ flex: 1 }}><PlayerName name={p.name} email={p.email} mailtoSubject={seasonName} mailtoBody={`${baseUrl}/availability/${p.availabilityToken}`} whatsapp={p.whatsapp} whatsappSubject={seasonName} clipboardText={`${baseUrl}/availability/${p.availabilityToken}`} /></span>
                 <span style={{ display: 'flex', flexWrap: 'wrap', gap: 4, justifyContent: 'flex-end' }}>
                   {p.preferredPositions.map(pos => (
                     <span key={pos} className="badge badge-gray">{pos}</span>

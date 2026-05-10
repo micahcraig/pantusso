@@ -50,9 +50,9 @@ describe('createGameWithRoster', () => {
 
     await createGameWithRoster(gameData)
 
-    // insert called once for the game + once per player = 4
-    expect(mockDb.insert).toHaveBeenCalledTimes(4)
-    expect(mockDb.run).toHaveBeenCalledTimes(4)
+    // insert: game + 3 game_players + activityLog = 5
+    expect(mockDb.insert).toHaveBeenCalledTimes(5)
+    expect(mockDb.run).toHaveBeenCalledTimes(5)
   })
 
   it('seeds no game_player rows when roster is empty', async () => {
@@ -60,8 +60,9 @@ describe('createGameWithRoster', () => {
 
     await createGameWithRoster(gameData)
 
-    expect(mockDb.insert).toHaveBeenCalledTimes(1)
-    expect(mockDb.run).toHaveBeenCalledTimes(1)
+    // insert: game + activityLog = 2
+    expect(mockDb.insert).toHaveBeenCalledTimes(2)
+    expect(mockDb.run).toHaveBeenCalledTimes(2)
   })
 
   it('passes attendance as "unknown" for each seeded player', async () => {

@@ -1,13 +1,14 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
-import { eq, asc, inArray } from 'drizzle-orm'
+import { eq, asc, inArray, desc } from 'drizzle-orm'
 import { requireSession } from '@/lib/session'
 import { db } from '@/db'
-import { seasons, games, opponents, gamePlayers, players } from '@/db/schema'
+import { seasons, games, opponents, gamePlayers, players, activityLog } from '@/db/schema'
 import { createGameWithRoster } from '@/lib/games'
 import type { HomeOrAway } from '@/db/schema'
 import ExportButton from './ExportButton'
+import UpdatesFeed from './UpdatesFeed'
 
 
 function fmtDate(d: string) {
@@ -20,7 +21,14 @@ function fmtTime(t: string) {
   return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${suffix}`
 }
 
-export default async function SeasonPage({ params }: { params: { id: string } }) {
+export default async function SeasonPage({
+  params,
+  searchParams,
+}: {
+  params:       { id: string }
+  searchParams?: { tab?: string }
+}) {
+  const tab = searchParams?.tab === 'updates' ? 'updates' : 'schedule'
   await requireSession()
 
   const season = await db.select().from(seasons).where(eq(seasons.id, params.id)).get()
@@ -45,6 +53,14 @@ export default async function SeasonPage({ params }: { params: { id: string } })
 
   const allOpponents = await db.select().from(opponents).orderBy(asc(opponents.name)).all()
 
+  const feedEntries = tab === 'updates'
+    ? await db.select().from(activityLog)
+        .where(eq(activityLog.seasonId, params.id))
+        .orderBy(desc(activityLog.createdAt))
+        .limit(200)
+        .all()
+    : []
+
   // Attendance summary per game
   const gameIds = gameRows.map(g => g.id)
   const attendanceRows = gameIds.length > 0
@@ -57,6 +73,7 @@ export default async function SeasonPage({ params }: { params: { id: string } })
         .from(gamePlayers)
         .innerJoin(players, eq(gamePlayers.playerId, players.id))
         .where(inArray(gamePlayers.gameId, gameIds))
+        .orderBy(asc(players.name))
         .all()
     : []
 
@@ -226,8 +243,39 @@ export default async function SeasonPage({ params }: { params: { id: string } })
         </>
       )}
 
+      {/* Tab bar */}
+      <div style={{ display: 'flex', gap: 0, marginBottom: 16, borderBottom: '2px solid #e5e7eb' }}>
+        {([
+          { label: 'Schedule', value: 'schedule', href: `/seasons/${params.id}` },
+          { label: 'Updates',  value: 'updates',  href: `/seasons/${params.id}?tab=updates` },
+        ] as const).map(t => (
+          <Link
+            key={t.value}
+            href={t.href}
+            style={{
+              padding:       '8px 16px',
+              fontSize:       14,
+              fontWeight:     tab === t.value ? 600 : 400,
+              color:          tab === t.value ? '#4f46e5' : '#6b7280',
+              borderBottom:  `2px solid ${tab === t.value ? '#4f46e5' : 'transparent'}`,
+              marginBottom:  -2,
+              textDecoration: 'none',
+            }}
+          >
+            {t.label}
+          </Link>
+        ))}
+      </div>
+
+      {/* Updates tab */}
+      {tab === 'updates' && (
+        <div className="card">
+          <UpdatesFeed entries={feedEntries} />
+        </div>
+      )}
+
       {/* Games list */}
-      <div className="card">
+      {tab === 'schedule' && <div className="card">
         {gameRows.length === 0 ? (
           <p style={{ color: '#9ca3af', textAlign: 'center', padding: '24px 0' }}>No games scheduled yet.</p>
         ) : (
@@ -241,15 +289,16 @@ export default async function SeasonPage({ params }: { params: { id: string } })
                 { names: att.out,       bg: '#fee2e2', color: '#991b1b' },
               ]
               return (
-                <details
+                <Link
                   key={g.id}
+                  href={`/games/${g.id}`}
                   className="game-row"
                   style={{
                     borderBottom: i < gameRows.length - 1 ? '1px solid #e5e7eb' : 'none',
                     opacity:      g.status === 'cancelled' ? 0.5 : 1,
                   }}
                 >
-                  <summary>
+                  <div className="game-row-header">
                     <div style={{ minWidth: 80, flexShrink: 0 }}>
                       <div style={{ fontWeight: 500, fontSize: 14 }}>{fmtDate(g.date)}</div>
                       <div style={{ fontSize: 12, color: '#9ca3af' }}>{fmtTime(g.time)}</div>
@@ -272,30 +321,23 @@ export default async function SeasonPage({ params }: { params: { id: string } })
                     <div style={{ flexShrink: 0, textAlign: 'right' }}>
                       {statusCell(g)}
                     </div>
-                  </summary>
-                  <div className="game-row-body">
-                    {hasAtt ? (
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px', marginBottom: 10 }}>
-                        {attCounts.map(({ names, color }) => names.map(name => (
-                          <span key={name} style={{ fontSize: 13, color }}>{name}</span>
-                        )))}
-                      </div>
-                    ) : (
-                      <p style={{ fontSize: 13, color: '#9ca3af', marginBottom: 10 }}>No responses yet.</p>
-                    )}
-                    <Link href={`/games/${g.id}`} className="btn btn-secondary btn-sm">
-                      View Game →
-                    </Link>
                   </div>
-                </details>
+                  {hasAtt && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px', marginTop: 6 }}>
+                      {attCounts.map(({ names, color }) => names.map(name => (
+                        <span key={name} style={{ fontSize: 13, color }}>{name}</span>
+                      )))}
+                    </div>
+                  )}
+                </Link>
               )
             })}
           </div>
         )}
-      </div>
+      </div>}
 
       {/* Add game */}
-      {allOpponents.length === 0 ? (
+      {tab === 'schedule' && (allOpponents.length === 0 ? (
         <div className="card mt-4" style={{ color: '#6b7280', fontSize: 14 }}>
           <Link href="/opponents" style={{ color: '#4f46e5' }}>Add opponents</Link> before scheduling games.
         </div>
@@ -340,7 +382,7 @@ export default async function SeasonPage({ params }: { params: { id: string } })
             </div>
           </form>
         </details>
-      )}
+      ))}
     </>
   )
 }

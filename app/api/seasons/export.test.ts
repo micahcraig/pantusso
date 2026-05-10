@@ -29,6 +29,7 @@ vi.mock('@/db/schema', () => ({
   opponents:    {},
   gamePlayers:  {},
   lineupEntries:{},
+  activityLog:  {},
 }))
 
 import { GET } from '@/app/api/seasons/[id]/export/route'
@@ -67,7 +68,7 @@ describe('GET /api/seasons/[id]/export', () => {
     expect(res.status).toBe(404)
   })
 
-  it('returns export data with version 1', async () => {
+  it('returns export data with version 2', async () => {
     mockGetServerSession.mockResolvedValue({ user: { id: 'u1', role: 'admin' } })
     mockDb.get.mockReturnValue(seasonRow)
     mockDb.all
@@ -75,11 +76,12 @@ describe('GET /api/seasons/[id]/export', () => {
       .mockReturnValueOnce(gameRows)      // games
       .mockReturnValueOnce(attendanceRows) // attendance
       .mockReturnValueOnce(lineupRows)    // lineup
+      .mockReturnValueOnce([])            // activityLog
 
     const res = await GET(makeRequest('s1'), { params: { id: 's1' } })
     expect(res.status).toBe(200)
     const body = await res.json()
-    expect(body.version).toBe(1)
+    expect(body.version).toBe(2)
     expect(body.season.name).toBe('Spring 2026')
   })
 
@@ -91,6 +93,7 @@ describe('GET /api/seasons/[id]/export', () => {
       .mockReturnValueOnce(gameRows)
       .mockReturnValueOnce(attendanceRows)
       .mockReturnValueOnce(lineupRows)
+      .mockReturnValueOnce([])            // activityLog
 
     const res = await GET(makeRequest('s1'), { params: { id: 's1' } })
     const body = await res.json()
@@ -107,6 +110,7 @@ describe('GET /api/seasons/[id]/export', () => {
       .mockReturnValueOnce(gameRows)
       .mockReturnValueOnce(attendanceRows)
       .mockReturnValueOnce(lineupRows)
+      .mockReturnValueOnce([])            // activityLog
 
     const res = await GET(makeRequest('s1'), { params: { id: 's1' } })
     const body = await res.json()
@@ -124,11 +128,12 @@ describe('GET /api/seasons/[id]/export', () => {
     mockDb.all
       .mockReturnValueOnce(rosterRows) // roster
       .mockReturnValueOnce([])         // no games
+      .mockReturnValueOnce([])         // activityLog (always queried)
 
     const res = await GET(makeRequest('s1'), { params: { id: 's1' } })
     const body = await res.json()
     expect(body.games).toEqual([])
     // attendance/lineup .all() should NOT be called when there are no games
-    expect(mockDb.all).toHaveBeenCalledTimes(2)
+    expect(mockDb.all).toHaveBeenCalledTimes(3)
   })
 })
