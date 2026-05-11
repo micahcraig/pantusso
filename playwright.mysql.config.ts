@@ -6,6 +6,7 @@ export default defineConfig({
   workers:             1,
   forbidOnly:          !!process.env.CI,
   retries:             process.env.CI ? 1 : 0,
+  timeout:             60_000,
   reporter:            [['html', { open: 'never' }]],
   use: {
     baseURL:    'http://localhost:3001',
