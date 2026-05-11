@@ -42,7 +42,10 @@ test('score_recorded: recording a final score appears in Season Updates', async 
   await page.locator('input[name="opponentScore"]').fill('3')
   await page.getByRole('button', { name: 'Mark as Final' }).click()
 
-  await expect(page.getByText('Final').first()).toBeVisible()
+  // Wait for the status badge to update — "Final" appears inside "+ Record Final Score"
+  // summary text too, so we must target the badge specifically to confirm the server
+  // action completed before navigating away.
+  await expect(page.locator('.badge-green').filter({ hasText: 'Final' })).toBeVisible()
 
   await page.goto(`/seasons/${seasonId}?tab=updates`)
   await expect(page.getByText(/Score recorded/)).toBeVisible()
@@ -115,7 +118,7 @@ test('availability_updated: player updating availability appears in Season Updat
   // Get Marcus Johnson's availability token via href (avoids click-interception from
   // the clipboard button rendered inside the roster row link)
   await page.goto('/roster')
-  const marcusHref = await page.locator('a').filter({ hasText: 'Marcus Johnson' }).first().getAttribute('href')
+  const marcusHref = await page.locator('a.list-row').filter({ hasText: 'Marcus Johnson' }).first().getAttribute('href')
   await page.goto(marcusHref!)
   await page.waitForURL(/\/roster\//)
   const code = await page.locator('code').textContent()

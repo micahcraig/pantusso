@@ -32,8 +32,7 @@ test('season detail lists games', async ({ page }) => {
 test('navigates to game detail when a game row is clicked', async ({ page }) => {
   await page.goto('/seasons')
   await page.getByText('Spring 2026').click()
-  await page.locator('details.game-row').filter({ hasText: /Diamond Devils/ }).first().locator('summary').click()
-  await page.getByRole('link', { name: 'View Game →' }).first().click()
+  await page.locator('a.game-row').filter({ hasText: /Diamond Devils/ }).first().click()
   await expect(page).toHaveURL(/\/games\//)
 })
 

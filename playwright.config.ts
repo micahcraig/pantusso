@@ -10,7 +10,6 @@ export default defineConfig({
   workers:             1,    // SQLite can't handle concurrent writes across spec files
   forbidOnly:          !!process.env.CI,
   retries:             process.env.CI ? 1 : 0,
-  timeout:             60_000,
   reporter:            [['html', { open: 'never' }]],
   use: {
     baseURL:     'http://localhost:3001',
@@ -61,7 +60,7 @@ export default defineConfig({
       DATABASE_URL:  'sqlite:./test.db',
       NEXTAUTH_URL:  'http://localhost:3001',
     },
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
     timeout:             120_000,
     stdout:              'ignore',
     stderr:              'pipe',

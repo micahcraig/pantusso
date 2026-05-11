@@ -1,16 +1,11 @@
 import { test, expect, type Page } from '@playwright/test'
 
-// Game rows are <details class="game-row"> with the opponent name inside <summary>.
-// We click the summary directly (not a child span) to avoid matching the
-// "Record by Opponent" stats section that also contains the opponent name.
 async function goToGame(page: Page, opponentPattern: RegExp) {
   await page
-    .locator('details.game-row')
+    .locator('a.game-row')
     .filter({ hasText: opponentPattern })
     .first()
-    .locator('summary')
     .click()
-  await page.getByRole('link', { name: 'View Game →' }).first().click()
   await page.waitForURL(/\/games\//)
 }
 
