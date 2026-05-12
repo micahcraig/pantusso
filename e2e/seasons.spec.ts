@@ -41,3 +41,71 @@ test('shows the + Add Game form at the bottom', async ({ page }) => {
   await page.getByText('Spring 2026').click()
   await expect(page.getByText('+ Add Game')).toBeVisible()
 })
+
+test('cancel editing restores the original season name', async ({ page }) => {
+  await page.goto('/seasons')
+  await page.getByText('Spring 2026').click()
+  await page.waitForURL(/\/seasons\//)
+
+  await page.getByRole('button', { name: 'Edit season' }).click()
+  await page.getByRole('textbox').first().fill('Do Not Save This')
+  await page.getByRole('button', { name: 'Cancel' }).click()
+
+  await expect(page.getByRole('heading', { name: 'Spring 2026' })).toBeVisible()
+  await expect(page.getByText('Do Not Save This')).not.toBeVisible()
+})
+
+test('roster tab shows all active players with toggles', async ({ page }) => {
+  await page.goto('/seasons')
+  await page.getByText('Spring 2026').click()
+  await page.waitForURL(/\/seasons\//)
+
+  await page.getByRole('main').getByRole('link', { name: 'Roster' }).click()
+  await page.waitForURL(/\?tab=roster/)
+
+  // Marcus Johnson is in both seeds and in the season roster
+  await expect(page.getByText('Marcus Johnson')).toBeVisible()
+  // All players should have a toggle switch
+  const switches = page.getByRole('switch')
+  await expect(switches.first()).toBeVisible()
+})
+
+test('roster tab toggle removes and re-adds a player', async ({ page }) => {
+  await page.goto('/seasons')
+  await page.getByText('Spring 2026').click()
+  await page.waitForURL(/\/seasons\//)
+  await page.getByRole('main').getByRole('link', { name: 'Roster' }).click()
+  await page.waitForURL(/\?tab=roster/)
+
+  // Marcus Johnson should start on the roster (checked)
+  const marcusSwitch = page.getByRole('switch', { name: /Marcus Johnson/ })
+  await expect(marcusSwitch).toHaveAttribute('aria-checked', 'true')
+
+  // Toggle off
+  await marcusSwitch.click()
+  await expect(marcusSwitch).toHaveAttribute('aria-checked', 'false')
+
+  // Toggle back on
+  await marcusSwitch.click()
+  await expect(marcusSwitch).toHaveAttribute('aria-checked', 'true')
+})
+
+test('inline edit saves the season name and dates in place', async ({ page }) => {
+  await page.goto('/seasons')
+  await page.getByText('Spring 2026').click()
+  await page.waitForURL(/\/seasons\//)
+
+  await page.getByRole('button', { name: 'Edit season' }).click()
+  await page.getByRole('textbox').first().fill('Spring 2026 Edited')
+  await page.getByRole('button', { name: 'Save' }).click()
+
+  // Heading updates in place without a full navigation
+  await expect(page.getByRole('heading', { name: 'Spring 2026 Edited' })).toBeVisible()
+  await expect(page).toHaveURL(/\/seasons\//)
+
+  // Revert so remaining tests in the suite still find 'Spring 2026'
+  await page.getByRole('button', { name: 'Edit season' }).click()
+  await page.getByRole('textbox').first().fill('Spring 2026')
+  await page.getByRole('button', { name: 'Save' }).click()
+  await expect(page.getByRole('heading', { name: 'Spring 2026' })).toBeVisible()
+})

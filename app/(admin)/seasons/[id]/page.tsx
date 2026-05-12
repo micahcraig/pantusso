@@ -1,14 +1,17 @@
 import Link from 'next/link'
+import { headers } from 'next/headers'
 import { notFound, redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { eq, asc, inArray, desc } from 'drizzle-orm'
 import { requireSession } from '@/lib/session'
 import { db } from '@/db'
-import { seasons, games, opponents, gamePlayers, players, activityLog } from '@/db/schema'
+import { seasons, games, opponents, gamePlayers, players, seasonRoster, activityLog } from '@/db/schema'
 import { createGameWithRoster } from '@/lib/games'
 import type { HomeOrAway } from '@/db/schema'
 import ExportButton from './ExportButton'
 import UpdatesFeed from './UpdatesFeed'
+import SeasonHeader from './SeasonHeader'
+import RosterPanel from './RosterPanel'
 
 
 function fmtDate(d: string) {
@@ -28,7 +31,7 @@ export default async function SeasonPage({
   params:       { id: string }
   searchParams?: { tab?: string }
 }) {
-  const tab = searchParams?.tab === 'updates' ? 'updates' : 'schedule'
+  const tab = searchParams?.tab === 'updates' ? 'updates' : searchParams?.tab === 'roster' ? 'roster' : 'schedule'
   await requireSession()
 
   const season = await db.select().from(seasons).where(eq(seasons.id, params.id)).get()
@@ -59,6 +62,36 @@ export default async function SeasonPage({
         .orderBy(desc(activityLog.createdAt))
         .limit(200)
         .all()
+    : []
+
+  const headersList = headers()
+  const host   = headersList.get('host') ?? 'localhost:3000'
+  const proto  = process.env.NODE_ENV === 'production' ? 'https' : 'http'
+  const availabilityBaseUrl = `${proto}://${host}`
+
+  const allActivePlayers = tab === 'roster'
+    ? (await db
+        .select({ id: players.id, name: players.name, jerseyNumber: players.jerseyNumber, preferredPositions: players.preferredPositions, email: players.email, whatsapp: players.whatsapp, availabilityToken: players.availabilityToken })
+        .from(players)
+        .where(eq(players.isActive, true))
+        .all())
+        .sort((a, b) => {
+          const aNum = a.jerseyNumber !== null ? Number(a.jerseyNumber) : NaN
+          const bNum = b.jerseyNumber !== null ? Number(b.jerseyNumber) : NaN
+          if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum
+          if (!isNaN(aNum)) return -1
+          if (!isNaN(bNum)) return 1
+          return a.name.localeCompare(b.name)
+        })
+    : []
+
+  const rosterPlayerIds = tab === 'roster'
+    ? (await db
+        .select({ playerId: seasonRoster.playerId })
+        .from(seasonRoster)
+        .where(eq(seasonRoster.seasonId, params.id))
+        .all())
+        .map(r => r.playerId)
     : []
 
   // Attendance summary per game
@@ -106,11 +139,8 @@ export default async function SeasonPage({
     }, {} as Record<string, { name: string; w: number; l: number; t: number }>)
   ).sort((a, b) => a.name.localeCompare(b.name))
 
-  async function editSeason(data: FormData) {
+  async function editSeason(name: string, startDate: string, endDate: string) {
     'use server'
-    const name      = (data.get('name')      as string).trim()
-    const startDate = (data.get('startDate') as string).trim()
-    const endDate   = (data.get('endDate')   as string).trim()
     if (!name || !startDate || !endDate) return
     await db.update(seasons).set({ name, startDate, endDate, updatedAt: new Date() })
       .where(eq(seasons.id, params.id)).run()
@@ -165,49 +195,22 @@ export default async function SeasonPage({
         <Link href="/seasons" style={{ color: '#6b7280', fontSize: 14 }}>← Seasons</Link>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
-        <div>
-          <h1 style={{ margin: 0 }}>{season.name}</h1>
-          <p style={{ color: '#6b7280', fontSize: 14, marginTop: 4 }}>
-            {new Date(season.startDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
-            {' – '}
-            {new Date(season.endDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20, gap: 16 }}>
+        <SeasonHeader
+          initialName={season.name}
+          initialStartDate={season.startDate}
+          initialEndDate={season.endDate}
+          onSave={editSeason}
+        />
+        <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', flexShrink: 0 }}>
           <ExportButton seasonId={params.id} seasonName={season.name} />
-          <Link href={`/seasons/${params.id}/roster`} className="btn btn-secondary btn-sm">Manage Roster</Link>
         </div>
       </div>
 
-      {/* Edit season */}
-      <details className="card mb-4">
-        <summary style={{ cursor: 'pointer', fontWeight: 600, fontSize: 15 }}>Edit Season</summary>
-        <form action={editSeason} style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <div className="form-row">
-            <div className="field" style={{ flex: 1 }}>
-              <label htmlFor="season-name">Name *</label>
-              <input id="season-name" name="name" type="text" required defaultValue={season.name} />
-            </div>
-            <div className="field">
-              <label htmlFor="season-start">Start Date *</label>
-              <input id="season-start" name="startDate" type="date" required defaultValue={season.startDate} />
-            </div>
-            <div className="field">
-              <label htmlFor="season-end">End Date *</label>
-              <input id="season-end" name="endDate" type="date" required defaultValue={season.endDate} />
-            </div>
-          </div>
-          <div>
-            <button type="submit" className="btn btn-primary btn-sm">Save Changes</button>
-          </div>
-        </form>
-      </details>
-
       {/* Record */}
       {completed.length > 0 && (
-        <>
-          <div className="card mb-4" style={{ display: 'flex', gap: 32, padding: '16px 24px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
+          <div className="card" style={{ display: 'flex', gap: 32, padding: '16px 24px', flexWrap: 'wrap', flex: '1 1 260px' }}>
             {[
               { label: 'Wins',   value: wins,   color: '#166534' },
               { label: 'Losses', value: losses, color: '#991b1b' },
@@ -227,7 +230,7 @@ export default async function SeasonPage({
           </div>
 
           {/* Per-opponent breakdown */}
-          <div className="card mb-4">
+          <div className="card" style={{ flex: '1 1 260px' }}>
             <h3 style={{ margin: '0 0 12px', fontSize: 15 }}>Record by Opponent</h3>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 24px' }}>
               {opponentRecords.map(r => (
@@ -240,13 +243,14 @@ export default async function SeasonPage({
               ))}
             </div>
           </div>
-        </>
+        </div>
       )}
 
       {/* Tab bar */}
       <div style={{ display: 'flex', gap: 0, marginBottom: 16, borderBottom: '2px solid #e5e7eb' }}>
         {([
           { label: 'Schedule', value: 'schedule', href: `/seasons/${params.id}` },
+          { label: 'Roster',   value: 'roster',   href: `/seasons/${params.id}?tab=roster` },
           { label: 'Updates',  value: 'updates',  href: `/seasons/${params.id}?tab=updates` },
         ] as const).map(t => (
           <Link
@@ -266,6 +270,17 @@ export default async function SeasonPage({
           </Link>
         ))}
       </div>
+
+      {/* Roster tab */}
+      {tab === 'roster' && (
+        <RosterPanel
+          seasonId={params.id}
+          seasonName={season.name}
+          availabilityBaseUrl={availabilityBaseUrl}
+          allPlayers={allActivePlayers}
+          initialRosterIds={rosterPlayerIds}
+        />
+      )}
 
       {/* Updates tab */}
       {tab === 'updates' && (
