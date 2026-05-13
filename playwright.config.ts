@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test'
 
-// Tests that exercise admin-only features (season import/export, user management).
-const ADMIN_SPECS = ['**/import-export.spec.ts']
+// Tests that exercise admin-only features (season import/export, user management, remove game).
+const ADMIN_SPECS = ['**/import-export.spec.ts', '**/remove-game.spec.ts']
 
 export default defineConfig({
   testDir:             './e2e',

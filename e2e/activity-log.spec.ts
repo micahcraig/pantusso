@@ -112,6 +112,31 @@ test('attendance_updated: admin changing attendance appears in Season Updates', 
   await expect(page.getByText(/County Crushers/).first()).toBeVisible()
 })
 
+test('ringer_added: adding a player to the season roster appears in Season Updates', async ({ page }) => {
+  const seasonId = await getSeasonId(page)
+
+  // Get the roster to find Marcus Johnson's playerId
+  const rosterRes = await page.request.get(`/api/seasons/${seasonId}/roster`)
+  const roster = await rosterRes.json() as Array<{ playerId: string; name: string }>
+  const marcus = roster.find(p => p.name === 'Marcus Johnson')
+  expect(marcus).toBeDefined()
+
+  // Remove from roster so we can re-add as a ringer
+  await page.request.patch(`/api/seasons/${seasonId}/roster`, {
+    data: { playerId: marcus!.playerId, inRoster: false },
+  })
+
+  // Add back — this should generate the ringer_added log entry
+  const res = await page.request.patch(`/api/seasons/${seasonId}/roster`, {
+    data: { playerId: marcus!.playerId, inRoster: true },
+  })
+  expect(res.ok()).toBeTruthy()
+
+  await page.goto(`/seasons/${seasonId}?tab=updates`)
+  await expect(page.getByText(/Marcus Johnson/).first()).toBeVisible()
+  await expect(page.getByText(/added to roster as a ringer/).first()).toBeVisible()
+})
+
 test('availability_updated: player updating availability appears in Season Updates', async ({ page }) => {
   const seasonId = await getSeasonId(page)
 

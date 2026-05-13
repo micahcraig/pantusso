@@ -7,7 +7,7 @@ export type LineupStatus = 'active' | 'bench' | 'did_not_bat'
 export type AttendanceStatus = 'confirmed' | 'maybe' | 'out' | 'unknown'
 export type UserRole = 'admin' | 'manager'
 export type HomeOrAway = 'home' | 'away'
-export type GameStatus = 'scheduled' | 'completed' | 'cancelled'
+export type GameStatus = 'scheduled' | 'completed' | 'cancelled' | 'removed'
 
 // ── Users ─────────────────────────────────────────────────────────────────────
 
@@ -84,7 +84,7 @@ export const games = sqliteTable('games', {
   homeOrAway:    text('home_or_away', { enum: ['home', 'away'] as const }).notNull(),
   ourScore:      integer('our_score'),
   opponentScore: integer('opponent_score'),
-  status:        text('status', { enum: ['scheduled', 'completed', 'cancelled'] as const }).notNull().default('scheduled'),
+  status:        text('status', { enum: ['scheduled', 'completed', 'cancelled', 'removed'] as const }).notNull().default('scheduled'),
   createdAt:     integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
   updatedAt:     integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
 }, (t) => ({
@@ -132,6 +132,7 @@ export type ActivityEventType =
   | 'game_cancelled'
   | 'game_rescheduled'
   | 'game_added'
+  | 'ringer_added'
 
 export const activityLog = sqliteTable('activity_log', {
   id:        text('id').primaryKey().$defaultFn(() => randomUUID()),

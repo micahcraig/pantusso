@@ -2,7 +2,8 @@ import { test, expect, type Page } from '@playwright/test'
 
 async function getAvailabilityToken(page: Page): Promise<string> {
   await page.goto('/roster')
-  await page.locator('a.list-row').filter({ hasText: 'Marcus Johnson' }).first().getByText('Marcus Johnson').click()
+  const href = await page.locator('a.list-row').filter({ hasText: 'Marcus Johnson' }).first().getAttribute('href')
+  await page.goto(href!)
   const code = await page.locator('code').textContent()
   const token = code!.split('/availability/')[1].trim()
   return token

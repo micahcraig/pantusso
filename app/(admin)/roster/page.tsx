@@ -23,14 +23,9 @@ export default async function RosterPage() {
   const seasonName   = latestSeason?.name
 
   const allPlayers = await db.select().from(players).all()
-  const byJerseyThenName = (a: { jerseyNumber: string | null; name: string }, b: { jerseyNumber: string | null; name: string }) => {
-    if (a.jerseyNumber && b.jerseyNumber) return +a.jerseyNumber - +b.jerseyNumber
-    if (a.jerseyNumber) return -1
-    if (b.jerseyNumber) return 1
-    return a.name.localeCompare(b.name)
-  }
-  const active   = allPlayers.filter(p =>  p.isActive).sort(byJerseyThenName)
-  const inactive = allPlayers.filter(p => !p.isActive).sort(byJerseyThenName)
+  const byName = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name)
+  const active   = allPlayers.filter(p =>  p.isActive).sort(byName)
+  const inactive = allPlayers.filter(p => !p.isActive).sort(byName)
 
   async function createPlayer(data: FormData) {
     'use server'

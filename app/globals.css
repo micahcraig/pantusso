@@ -181,6 +181,12 @@ h2 { font-size: 18px; font-weight: 600; margin-bottom: 16px; }
 /* Active nav link */
 .nav-link-active { color: #fff !important; background: rgba(255,255,255,0.15); }
 
+/* PlayerName icon buttons/links */
+.player-icon { background: none; border: none; padding: 0; cursor: pointer; color: #9ca3af; line-height: 1; display: inline-flex; align-items: center; }
+.player-icon:hover { color: #4f46e5; text-decoration: none; }
+.player-icon-wa { color: #9ca3af; line-height: 1; display: inline-flex; align-items: center; }
+.player-icon-wa:hover { color: #25d366; text-decoration: none; }
+
 /* Two-column responsive grid */
 .grid-cols-2 {
   display: grid;

@@ -21,9 +21,7 @@ export default function SeasonHeader({
   initialEndDate:   string
   onSave:           (name: string, startDate: string, endDate: string) => Promise<void>
 }) {
-  const [name,      setName]      = useState(initialName)
-  const [startDate, setStartDate] = useState(initialStartDate)
-  const [endDate,   setEndDate]   = useState(initialEndDate)
+  const [committed, setCommitted] = useState({ name: initialName, startDate: initialStartDate, endDate: initialEndDate })
 
   const [editing, setEditing] = useState(false)
   const [saving,  setSaving]  = useState(false)
@@ -34,9 +32,9 @@ export default function SeasonHeader({
   const [draftEnd,   setDraftEnd]   = useState(initialEndDate)
 
   function startEdit() {
-    setDraftName(name)
-    setDraftStart(startDate)
-    setDraftEnd(endDate)
+    setDraftName(committed.name)
+    setDraftStart(committed.startDate)
+    setDraftEnd(committed.endDate)
     setError(null)
     setEditing(true)
   }
@@ -53,9 +51,7 @@ export default function SeasonHeader({
     setError(null)
     try {
       await onSave(trimmed, draftStart, draftEnd)
-      setName(trimmed)
-      setStartDate(draftStart)
-      setEndDate(draftEnd)
+      setCommitted({ name: trimmed, startDate: draftStart, endDate: draftEnd })
       setEditing(false)
     } catch {
       setError('Failed to save changes')
@@ -109,7 +105,7 @@ export default function SeasonHeader({
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-        <h1 style={{ margin: 0 }}>{name}</h1>
+        <h1 style={{ margin: 0 }}>{committed.name}</h1>
         <button
           onClick={startEdit}
           title="Edit season"
@@ -127,9 +123,9 @@ export default function SeasonHeader({
         </button>
       </div>
       <p style={{ color: '#6b7280', fontSize: 14, margin: 0 }}>
-        {fmtDate(startDate)}
+        {fmtDate(committed.startDate)}
         {' – '}
-        {fmtDate(endDate, true)}
+        {fmtDate(committed.endDate, true)}
       </p>
     </div>
   )

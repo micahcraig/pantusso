@@ -31,8 +31,10 @@ export default async function SeasonPage({
   params:       { id: string }
   searchParams?: { tab?: string }
 }) {
-  const tab = searchParams?.tab === 'updates' ? 'updates' : searchParams?.tab === 'roster' ? 'roster' : 'schedule'
-  await requireSession()
+  const rawTab = searchParams?.tab
+  const tab: 'schedule' | 'roster' | 'updates' = rawTab === 'updates' || rawTab === 'roster' ? rawTab : 'schedule'
+  const session = await requireSession()
+  const isAdmin = session.user.role === 'admin'
 
   const season = await db.select().from(seasons).where(eq(seasons.id, params.id)).get()
   if (!season) notFound()
@@ -54,6 +56,9 @@ export default async function SeasonPage({
     .orderBy(asc(games.date))
     .all()
 
+  const visibleGameRows = gameRows.filter(g => g.status !== 'removed')
+  const removedGameRows = gameRows.filter(g => g.status === 'removed')
+
   const allOpponents = await db.select().from(opponents).orderBy(asc(opponents.name)).all()
 
   const feedEntries = tab === 'updates'
@@ -69,33 +74,34 @@ export default async function SeasonPage({
   const proto  = process.env.NODE_ENV === 'production' ? 'https' : 'http'
   const availabilityBaseUrl = `${proto}://${host}`
 
-  const allActivePlayers = tab === 'roster'
-    ? (await db
-        .select({ id: players.id, name: players.name, jerseyNumber: players.jerseyNumber, preferredPositions: players.preferredPositions, email: players.email, whatsapp: players.whatsapp, availabilityToken: players.availabilityToken })
-        .from(players)
-        .where(eq(players.isActive, true))
-        .all())
-        .sort((a, b) => {
-          const aNum = a.jerseyNumber !== null ? Number(a.jerseyNumber) : NaN
-          const bNum = b.jerseyNumber !== null ? Number(b.jerseyNumber) : NaN
-          if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum
-          if (!isNaN(aNum)) return -1
-          if (!isNaN(bNum)) return 1
-          return a.name.localeCompare(b.name)
-        })
+  const rosterData = tab === 'roster'
+    ? await Promise.all([
+        db.select({ id: players.id, name: players.name, jerseyNumber: players.jerseyNumber, preferredPositions: players.preferredPositions, email: players.email, whatsapp: players.whatsapp, availabilityToken: players.availabilityToken })
+          .from(players)
+          .where(eq(players.isActive, true))
+          .all(),
+        db.select({ playerId: seasonRoster.playerId })
+          .from(seasonRoster)
+          .where(eq(seasonRoster.seasonId, params.id))
+          .all(),
+      ])
+    : null
+
+  const allActivePlayers = rosterData
+    ? rosterData[0].sort((a, b) => {
+        const aNum = a.jerseyNumber !== null ? Number(a.jerseyNumber) : NaN
+        const bNum = b.jerseyNumber !== null ? Number(b.jerseyNumber) : NaN
+        if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum
+        if (!isNaN(aNum)) return -1
+        if (!isNaN(bNum)) return 1
+        return a.name.localeCompare(b.name)
+      })
     : []
 
-  const rosterPlayerIds = tab === 'roster'
-    ? (await db
-        .select({ playerId: seasonRoster.playerId })
-        .from(seasonRoster)
-        .where(eq(seasonRoster.seasonId, params.id))
-        .all())
-        .map(r => r.playerId)
-    : []
+  const rosterPlayerIds = rosterData ? rosterData[1].map(r => r.playerId) : []
 
-  // Attendance summary per game
-  const gameIds = gameRows.map(g => g.id)
+  // Attendance summary per game (visible games only)
+  const gameIds = visibleGameRows.map(g => g.id)
   const attendanceRows = gameIds.length > 0
     ? await db
         .select({
@@ -121,7 +127,7 @@ export default async function SeasonPage({
   }
 
   // W / L / T / run diff from completed games
-  const completed = gameRows.filter(g => g.status === 'completed')
+  const completed = visibleGameRows.filter(g => g.status === 'completed')
   const wins    = completed.filter(g => (g.ourScore ?? 0) > (g.opponentScore ?? 0)).length
   const losses  = completed.filter(g => (g.ourScore ?? 0) < (g.opponentScore ?? 0)).length
   const ties    = completed.filter(g => (g.ourScore ?? 0) === (g.opponentScore ?? 0)).length
@@ -215,7 +221,7 @@ export default async function SeasonPage({
               { label: 'Wins',   value: wins,   color: '#166534' },
               { label: 'Losses', value: losses, color: '#991b1b' },
               ...(ties > 0 ? [{ label: 'Ties', value: ties, color: '#374151' }] : []),
-              { label: 'Games',  value: gameRows.filter(g => g.status !== 'cancelled').length, color: '#374151' },
+              { label: 'Games',  value: visibleGameRows.filter(g => g.status !== 'cancelled').length, color: '#374151' },
               {
                 label: 'Run Diff',
                 value: (runDiff > 0 ? '+' : '') + runDiff,
@@ -291,11 +297,11 @@ export default async function SeasonPage({
 
       {/* Games list */}
       {tab === 'schedule' && <div className="card">
-        {gameRows.length === 0 ? (
+        {visibleGameRows.length === 0 ? (
           <p style={{ color: '#9ca3af', textAlign: 'center', padding: '24px 0' }}>No games scheduled yet.</p>
         ) : (
           <div>
-            {gameRows.map((g, i) => {
+            {visibleGameRows.map((g, i) => {
               const att = attByGame.get(g.id) ?? { confirmed: [], maybe: [], out: [] }
               const hasAtt = att.confirmed.length + att.maybe.length + att.out.length > 0
               const attCounts: { names: string[]; bg: string; color: string }[] = [
@@ -309,7 +315,7 @@ export default async function SeasonPage({
                   href={`/games/${g.id}`}
                   className="game-row"
                   style={{
-                    borderBottom: i < gameRows.length - 1 ? '1px solid #e5e7eb' : 'none',
+                    borderBottom: i < visibleGameRows.length - 1 ? '1px solid #e5e7eb' : 'none',
                     opacity:      g.status === 'cancelled' ? 0.5 : 1,
                   }}
                 >
@@ -350,6 +356,44 @@ export default async function SeasonPage({
           </div>
         )}
       </div>}
+
+      {/* Removed games (admin-only) */}
+      {tab === 'schedule' && isAdmin && removedGameRows.length > 0 && (
+        <details style={{ marginTop: 16 }}>
+          <summary style={{ cursor: 'pointer', fontSize: 14, color: '#6b7280', marginBottom: 8 }}>
+            {removedGameRows.length} removed game{removedGameRows.length !== 1 ? 's' : ''}
+          </summary>
+          <div className="card mt-4">
+            {removedGameRows.map((g, i) => (
+              <Link
+                key={g.id}
+                href={`/games/${g.id}`}
+                className="game-row"
+                style={{
+                  borderBottom: i < removedGameRows.length - 1 ? '1px solid #e5e7eb' : 'none',
+                  opacity: 0.5,
+                }}
+              >
+                <div className="game-row-header">
+                  <div style={{ minWidth: 80, flexShrink: 0 }}>
+                    <div style={{ fontWeight: 500, fontSize: 14 }}>{fmtDate(g.date)}</div>
+                    <div style={{ fontSize: 12, color: '#9ca3af' }}>{fmtTime(g.time)}</div>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 500, fontSize: 14 }}>{g.opponentName}</div>
+                    <div style={{ fontSize: 12, color: '#6b7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {g.location}
+                    </div>
+                  </div>
+                  <div style={{ flexShrink: 0 }}>
+                    <span className="badge badge-gray">Removed</span>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </details>
+      )}
 
       {/* Add game */}
       {tab === 'schedule' && (allOpponents.length === 0 ? (

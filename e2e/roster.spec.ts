@@ -20,7 +20,7 @@ test('shows jersey numbers', async ({ page }) => {
 
 test('navigates to player detail when a row is clicked', async ({ page }) => {
   await page.goto('/roster')
-  await page.locator('a.list-row').filter({ hasText: 'Marcus Johnson' }).first().getByText('Marcus Johnson').click()
+  await page.locator('a.list-row').filter({ hasText: 'Marcus Johnson' }).first().getByText('#7').click()
   await expect(page).toHaveURL(/\/roster\//)
   await expect(page.getByText('Marcus Johnson')).toBeVisible()
 })
@@ -42,7 +42,7 @@ test('clipboard icon copies availability URL when clicked', async ({ page, conte
 
   // Get the token from the player detail page so we know what to expect
   await page.goto('/roster')
-  await page.locator('a.list-row').filter({ hasText: 'Marcus Johnson' }).first().getByText('Marcus Johnson').click()
+  await page.locator('a.list-row').filter({ hasText: 'Marcus Johnson' }).first().getByText('#7').click()
   const code  = await page.locator('code').textContent()
   const token = code!.split('/availability/')[1].trim()
 

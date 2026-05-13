@@ -9,7 +9,7 @@ import { logActivity } from '@/lib/activity'
 import { db } from '@/db'
 import { games, opponents, seasons, gamePlayers, players, lineupEntries, seasonRoster } from '@/db/schema'
 import GameDetail from './GameDetail'
-import PositionCheckboxes from '@/components/PositionCheckboxes'
+import AddRingerForm from './AddRingerForm'
 import type { AttendanceRow } from './AttendancePanel'
 import type { LineupEntry } from '@/components/lineup-editor-wrapper'
 import type { Position } from '@/db/schema'
@@ -26,7 +26,8 @@ function fmtTime(t: string) {
 }
 
 export default async function GamePage({ params }: { params: { id: string } }) {
-  await requireSession()
+  const session = await requireSession()
+  const isAdmin = session.user.role === 'admin'
 
   const game = await db
     .select({
@@ -137,6 +138,22 @@ export default async function GamePage({ params }: { params: { id: string } }) {
     revalidatePath(`/seasons/${gameRow.seasonId}`)
   }
 
+  async function removeGame() {
+    'use server'
+    await db.update(games).set({ status: 'removed', updatedAt: new Date() })
+      .where(eq(games.id, params.id)).run()
+    revalidatePath(`/games/${params.id}`)
+    revalidatePath(`/seasons/${gameRow.seasonId}`)
+  }
+
+  async function restoreGame() {
+    'use server'
+    await db.update(games).set({ status: 'scheduled', updatedAt: new Date() })
+      .where(eq(games.id, params.id)).run()
+    revalidatePath(`/games/${params.id}`)
+    revalidatePath(`/seasons/${gameRow.seasonId}`)
+  }
+
   async function addRinger(data: FormData) {
     'use server'
     const name         = (data.get('name')         as string).trim()
@@ -179,6 +196,7 @@ export default async function GamePage({ params }: { params: { id: string } }) {
   const statusBadge = () => {
     if (game.status === 'completed') return <span className="badge badge-green">Final</span>
     if (game.status === 'cancelled') return <span className="badge badge-gray">Cancelled</span>
+    if (game.status === 'removed')   return <span className="badge badge-gray">Removed</span>
     return <span className="badge badge-blue">Scheduled</span>
   }
 
@@ -240,7 +258,7 @@ export default async function GamePage({ params }: { params: { id: string } }) {
       />
 
       {/* Record / edit result */}
-      {game.status !== 'cancelled' && (
+      {game.status !== 'cancelled' && game.status !== 'removed' && (
         <div className="card mt-4">
           {isCompleted ? (
             <details>
@@ -283,57 +301,32 @@ export default async function GamePage({ params }: { params: { id: string } }) {
         </div>
       )}
 
-      {game.status !== 'cancelled' && (
+      {game.status !== 'cancelled' && game.status !== 'removed' && (
         <details className="card mt-4">
           <summary style={{ cursor: 'pointer', fontWeight: 600, fontSize: 15 }}>+ Add Ringer</summary>
-          <form action={addRinger} style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div className="form-row">
-              <div className="field">
-                <label htmlFor="ringer-name">Name *</label>
-                <input id="ringer-name" name="name" type="text" required placeholder="Full name" />
-              </div>
-              <div className="field">
-                <label htmlFor="ringer-jersey">Jersey #</label>
-                <input id="ringer-jersey" name="jerseyNumber" type="text" placeholder="e.g. 12" style={{ minWidth: 80, maxWidth: 100 }} />
-              </div>
-            </div>
-
-            <div className="field">
-              <label>Preferred Positions</label>
-              <PositionCheckboxes />
-            </div>
-
-            <div className="form-row">
-              <div className="field">
-                <label htmlFor="ringer-phone">Phone</label>
-                <input id="ringer-phone" name="phone" type="tel" placeholder="555-0100" />
-              </div>
-              <div className="field">
-                <label htmlFor="ringer-email">Email</label>
-                <input id="ringer-email" name="email" type="email" placeholder="player@example.com" />
-              </div>
-              <div className="field">
-                <label htmlFor="ringer-whatsapp">WhatsApp</label>
-                <input id="ringer-whatsapp" name="whatsapp" type="tel" placeholder="Optional" />
-              </div>
-            </div>
-
-            <div className="field">
-              <label htmlFor="ringer-notes">Notes</label>
-              <textarea id="ringer-notes" name="notes" rows={2} placeholder="Any notes about this player" style={{ resize: 'vertical' }} />
-            </div>
-
-            <div>
-              <button type="submit" className="btn btn-primary">Add Ringer</button>
-            </div>
-          </form>
+          <AddRingerForm addRinger={addRinger} />
         </details>
       )}
 
-      {game.status === 'scheduled' && (
+      {(game.status === 'scheduled' || (isAdmin && game.status === 'cancelled')) && (
+        <div className="card mt-4" style={{ display: 'flex', gap: 8 }}>
+          {game.status === 'scheduled' && (
+            <form action={cancelGame}>
+              <button type="submit" className="btn btn-danger btn-sm">Cancel Game</button>
+            </form>
+          )}
+          {isAdmin && (
+            <form action={removeGame}>
+              <button type="submit" className="btn btn-secondary btn-sm">Remove Game</button>
+            </form>
+          )}
+        </div>
+      )}
+
+      {game.status === 'removed' && isAdmin && (
         <div className="card mt-4">
-          <form action={cancelGame}>
-            <button type="submit" className="btn btn-danger btn-sm">Cancel Game</button>
+          <form action={restoreGame}>
+            <button type="submit" className="btn btn-secondary btn-sm">Restore Game</button>
           </form>
         </div>
       )}
