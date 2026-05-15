@@ -153,6 +153,7 @@ export async function setAttendance(
         opponentName: gameInfo.opponentName,
         status:       attendance,
         prevStatus:   existing?.attendance ?? null,
+        note:         note ?? null,
       },
     })
   }

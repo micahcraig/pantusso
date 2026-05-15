@@ -15,6 +15,9 @@ const mockDb = vi.hoisted(() => {
 
 vi.mock('@/db', () => ({ db: mockDb }))
 
+const mockLogActivity = vi.hoisted(() => vi.fn())
+vi.mock('@/lib/activity', () => ({ logActivity: mockLogActivity }))
+
 import { lookupPlayerByToken, getUpcomingGames, setAttendance } from '@/lib/availability'
 
 // ── lookupPlayerByToken ────────────────────────────────────────────────────────
@@ -134,5 +137,27 @@ describe('setAttendance', () => {
     await setAttendance('g1', 'p1', 'confirmed')
     const valuesCall = mockDb.values.mock.calls[0][0]
     expect(valuesCall.note).toBeNull()
+  })
+
+  it('includes note in the activity log payload when provided', async () => {
+    mockDb.get
+      .mockReturnValueOnce({ id: 'gp1', availabilitySetAt: null, attendance: 'unknown' })
+      .mockReturnValueOnce({ seasonId: 's1', date: '2026-06-01', opponentName: 'Rivals' })
+      .mockReturnValueOnce({ name: 'Alice' })
+    await setAttendance('g1', 'p1', 'confirmed', 'might be late')
+    expect(mockLogActivity).toHaveBeenCalledWith(expect.objectContaining({
+      payload: expect.objectContaining({ note: 'might be late' }),
+    }))
+  })
+
+  it('includes null note in the activity log payload when note is not provided', async () => {
+    mockDb.get
+      .mockReturnValueOnce({ id: 'gp1', availabilitySetAt: null, attendance: 'unknown' })
+      .mockReturnValueOnce({ seasonId: 's1', date: '2026-06-01', opponentName: 'Rivals' })
+      .mockReturnValueOnce({ name: 'Alice' })
+    await setAttendance('g1', 'p1', 'confirmed')
+    expect(mockLogActivity).toHaveBeenCalledWith(expect.objectContaining({
+      payload: expect.objectContaining({ note: null }),
+    }))
   })
 })

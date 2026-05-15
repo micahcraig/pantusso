@@ -99,11 +99,13 @@ function eventDescription(entry: ActivityLogEntry): React.ReactNode {
       const s      = String(p.status ?? '')
       const status = STATUS_LABEL[s] ?? s
       const color  = STATUS_COLOR[s] ?? '#374151'
+      const note   = p.note ? String(p.note).trim() : ''
       return (
         <>
           <strong>{String(p.playerName ?? '')}</strong> marked themselves as{' '}
           <strong style={{ color }}>{status}</strong>{' '}
           for the {fmtDate(String(p.gameDate ?? ''))} game vs {String(p.opponentName ?? '')}
+          {note && <><br /><span style={{ color: '#6b7280', fontStyle: 'italic' }}>&ldquo;{note}&rdquo;</span></>}
         </>
       )
     }

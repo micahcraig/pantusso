@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { and, eq, inArray, ne } from 'drizzle-orm'
 import { authOptions } from '@/lib/auth'
@@ -56,7 +56,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   return NextResponse.json({ ok: true }, { status: 201 })
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
